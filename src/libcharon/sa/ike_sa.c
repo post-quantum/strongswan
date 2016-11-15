@@ -2511,6 +2511,16 @@ METHOD(ike_sa_t, roam, status_t,
 			break;
 	}
 
+	/* ignore roam events if MOBIKE is not supported/enabled and the local
+	 * address is statically configured */
+	if (this->version == IKEV2 && !supports_extension(this, EXT_MOBIKE) &&
+		this->ike_cfg->match_me(this->ike_cfg, this->my_host) > 128)
+	{
+		DBG2(DBG_IKE, "keeping statically configured path %H - %H",
+			 this->my_host, this->other_host);
+		return SUCCESS;
+	}
+
 	/* keep existing path if possible */
 	if (is_current_path_valid(this))
 	{
