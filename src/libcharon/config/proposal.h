@@ -117,6 +117,23 @@ struct proposal_t {
 	 */
 	void (*strip_dh)(proposal_t *this, diffie_hellman_group_t keep);
 
+#ifdef QSKE
+	/**
+ 	 * Check if the proposal has a specific QS DH group.
+	 *
+	 * @param group         group to check for
+	 * @return              TRUE if algorithm included
+	 */
+    bool (*has_qs_dh_group) (proposal_t *this, diffie_hellman_group_t group);
+
+    /**
+     * Strip QS DH groups from proposal to use it without PFS.
+     *
+     * @param keep          group to keep (MODP_NONE to remove all)
+     */
+    void (*strip_qs_dh)(proposal_t *this, diffie_hellman_group_t keep);
+#endif
+
 	/**
 	 * Compare two proposal, and select a matching subset.
 	 *

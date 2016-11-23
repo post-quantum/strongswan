@@ -207,6 +207,9 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	{
 		proposal_t *proposal;
 		diffie_hellman_t *dh;
+#ifdef QSKE
+		diffie_hellman_t *qs_dh = NULL;
+#endif
 
 		proposal = proposal_create(PROTO_IKE, 0);
 		if (integ)
@@ -231,8 +234,14 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		{
 			keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 
+#ifdef QSKE
+			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, dh, qs_dh,
+							nonce_i, nonce_r, ike_sa->get_id(ike_sa),
+							old_prf, old_skd);
+#else
 			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, dh, nonce_i,
 							nonce_r, ike_sa->get_id(ike_sa), old_prf, old_skd);
+#endif
 		}
 		if (ike_sa->get_version(ike_sa) == IKEV1)
 		{

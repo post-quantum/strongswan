@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2016 Post-Quantum
  * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -27,6 +28,7 @@
 #include <crypto/hashers/hash_algorithm_set.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
+#include <encoding/payloads/qske_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 
 /** maximum retries to do with cookies/other dh groups */
@@ -78,6 +80,30 @@ struct private_ike_init_t {
 	 * Keymat derivation (from IKE_SA)
 	 */
 	keymat_v2_t *keymat;
+
+#ifdef QSKE
+	/**
+	 * diffie hellman group to use
+	 * Quantum-safe workaround
+	 */
+	diffie_hellman_group_t qs_dh_group;
+
+	/**
+	 * diffie hellman key exchange
+	 * Quantum-safe workaround
+	 */
+	diffie_hellman_t *qs_dh;
+
+	/**
+	 * Applying DH public value failed?
+	 */
+	bool qs_dh_failed;
+
+	/**
+	 * Keymat derivation (from IKE_SA)
+	 */
+	keymat_v2_t *qs_keymat;
+#endif
 
 	/**
 	 * nonce chosen by us
@@ -280,6 +306,9 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 {
 	sa_payload_t *sa_payload;
 	ke_payload_t *ke_payload;
+#ifdef QSKE
+	qske_payload_t *qske_payload;
+#endif
 	nonce_payload_t *nonce_payload;
 	linked_list_t *proposal_list;
 	ike_sa_id_t *id;
@@ -328,13 +357,31 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		return FALSE;
 	}
 
+#ifdef QSKE
+	// TODO: Add code to check the support for QSKE
+	// TODO: this->config->quantum_safe(this->config) ...
+	qske_payload = qske_payload_create_from_diffie_hellman(PLV2_QSKEY_EXCHANGE,
+	                                                       this->qs_dh);
+	if (!qske_payload)
+	{
+		DBG1(DBG_IKE, "creating QSKE payload failed");
+		return FALSE;
+	}
+#endif
+
 	if (this->old_sa)
 	{	/* payload order differs if we are rekeying */
 		message->add_payload(message, (payload_t*)nonce_payload);
 		message->add_payload(message, (payload_t*)ke_payload);
+#ifdef QSKE
+		message->add_payload(message, (payload_t*)qske_payload);
+#endif
 	}
 	else
 	{
+#ifdef QSKE
+		message->add_payload(message, (payload_t*)qske_payload);
+#endif
 		message->add_payload(message, (payload_t*)ke_payload);
 		message->add_payload(message, (payload_t*)nonce_payload);
 	}
@@ -395,6 +442,9 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 	enumerator_t *enumerator;
 	payload_t *payload;
 	ke_payload_t *ke_payload = NULL;
+#ifdef QSKE
+	qske_payload_t *qske_payload = NULL;
+#endif
 
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
@@ -430,6 +480,16 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
 				break;
 			}
+#ifdef QSKE
+			case PLV2_QSKEY_EXCHANGE:
+			{
+				qske_payload = (qske_payload_t*)payload;
+
+				this->qs_dh_group = qske_payload->get_dh_group_number(
+										qske_payload);
+				break;
+			}
+#endif
 			case PLV2_NONCE:
 			{
 				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
@@ -508,6 +568,23 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 								ke_payload->get_key_exchange_data(ke_payload));
 		}
 	}
+#ifdef QSKE
+	if (qske_payload && this->proposal &&
+		this->proposal->has_qs_dh_group(this->proposal, this->qs_dh_group))
+	{
+		if (!this->initiator)
+		{
+			this->qs_dh = this->qs_keymat->keymat.create_dh(
+								&this->qs_keymat->keymat, this->qs_dh_group);
+		}
+		if (this->qs_dh)
+		{
+			this->qs_dh_failed = !this->qs_dh->set_other_public_value(
+						this->qs_dh,
+						qske_payload->get_key_exchange_data(qske_payload));
+		}
+	}
+#endif
 }
 
 METHOD(task_t, build_i, status_t,
@@ -539,6 +616,21 @@ METHOD(task_t, build_i, status_t,
 			return FAILED;
 		}
 	}
+
+#ifdef QSKE
+	if (!this->qs_dh)
+	{
+		this->qs_dh_group = this->config->get_qs_dh_group(this->config);
+		this->qs_dh = this->qs_keymat->keymat.create_dh(
+								&this->qs_keymat->keymat, this->qs_dh_group);
+		if (!this->qs_dh)
+		{
+			DBG1(DBG_IKE, "configured QS DH group %N not supported",
+				diffie_hellman_group_names, this->qs_dh_group);
+			return FAILED;
+		}
+	}
+#endif
 
 	/* generate nonce only when we are trying the first time */
 	if (this->my_nonce.ptr == NULL)
@@ -629,6 +721,9 @@ static bool derive_keys(private_ike_init_t *this,
 		}
 	}
 	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
+#ifdef QSKE
+                                       this->qs_dh,
+#endif
 									   nonce_i, nonce_r, id, prf_alg, skd))
 	{
 		return FALSE;
@@ -698,6 +793,39 @@ METHOD(task_t, build_r, status_t,
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
+
+#ifdef QSKE
+	if (this->qs_dh == NULL ||
+		!this->proposal->has_qs_dh_group(this->proposal, this->qs_dh_group))
+	{
+		uint16_t group;
+
+		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
+										  &group, NULL))
+		{
+			DBG1(DBG_IKE, "QS DH group %N inacceptable, requesting %N",
+				 diffie_hellman_group_names, this->qs_dh_group,
+				 diffie_hellman_group_names, group);
+			this->qs_dh_group = group;
+			group = htons(group);
+			message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
+								chunk_from_thing(group));
+		}
+		else
+		{
+			DBG1(DBG_IKE, "no acceptable proposal found");
+			message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		}
+		return FAILED;
+	}
+
+	if (this->qs_dh_failed)
+	{
+		DBG1(DBG_IKE, "applying QS DH public value failed");
+		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		return FAILED;
+	}
+#endif
 
 	if (!derive_keys(this, this->other_nonce, this->my_nonce))
 	{
@@ -900,6 +1028,21 @@ METHOD(task_t, process_i, status_t,
 		return FAILED;
 	}
 
+#ifdef QSKE
+	if (this->qs_dh == NULL ||
+		!this->proposal->has_qs_dh_group(this->proposal, this->qs_dh_group))
+	{
+		DBG1(DBG_IKE, "peer QS DH group selection invalid");
+		return FAILED;
+	}
+
+	if (this->qs_dh_failed)
+	{
+		DBG1(DBG_IKE, "applying QS DH public value failed");
+		return FAILED;
+	}
+#endif
+
 	if (!derive_keys(this, this->my_nonce, this->other_nonce))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
@@ -922,6 +1065,9 @@ METHOD(task_t, migrate, void,
 
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
+#ifdef QSKE
+	this->qs_keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
+#endif
 	this->proposal = NULL;
 	this->dh_failed = FALSE;
 	if (this->dh && this->dh->get_dh_group(this->dh) != this->dh_group)
@@ -930,12 +1076,26 @@ METHOD(task_t, migrate, void,
 		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
 												  this->dh_group);
 	}
+#ifdef QSKE
+	this->qs_dh_failed = FALSE;
+	if (this->qs_dh &&
+		this->qs_dh->get_dh_group(this->qs_dh) != this->qs_dh_group)
+	{       /* reset DH value only if group changed (INVALID_KE_PAYLOAD) */
+		this->qs_dh->destroy(this->qs_dh);
+		this->qs_dh = this->qs_keymat->keymat.create_dh(
+												&this->qs_keymat->keymat,
+												this->qs_dh_group);
+	}
+#endif
 }
 
 METHOD(task_t, destroy, void,
 	private_ike_init_t *this)
 {
 	DESTROY_IF(this->dh);
+#ifdef QSKE
+	DESTROY_IF(this->qs_dh);
+#endif
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->nonceg);
 	chunk_free(&this->my_nonce);
@@ -978,6 +1138,11 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.initiator = initiator,
 		.dh_group = MODP_NONE,
 		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
+#ifdef QSKE
+		/* FIXME: Hard-wired to NewHope-128 at the moment */
+		.qs_dh_group = NH_128_BIT,
+		.qs_keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
+#endif
 		.old_sa = old_sa,
 		.signature_authentication = lib->settings->get_bool(lib->settings,
 								"%s.signature_authentication", TRUE, lib->ns),

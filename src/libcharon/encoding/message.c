@@ -125,6 +125,9 @@ typedef struct {
 static payload_rule_t ike_sa_init_i_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+#ifdef QSKE
+    {PLV2_QSKEY_EXCHANGE,           1,  1,                      FALSE,  FALSE},
+#endif
 	{PLV2_SECURITY_ASSOCIATION,		1,	1,						FALSE,	FALSE},
 	{PLV2_KEY_EXCHANGE,				1,	1,						FALSE,	FALSE},
 	{PLV2_NONCE,					1,	1,						FALSE,	FALSE},
@@ -139,6 +142,9 @@ static payload_order_t ike_sa_init_i_order[] = {
 	{PLV2_NOTIFY,					COOKIE},
 	{PLV2_SECURITY_ASSOCIATION,		0},
 	{PLV2_KEY_EXCHANGE,				0},
+#ifdef QSKE
+    {PLV2_QSKEY_EXCHANGE,           0},
+#endif
 	{PLV2_NONCE,					0},
 	{PLV2_NOTIFY,					NAT_DETECTION_SOURCE_IP},
 	{PLV2_NOTIFY,					NAT_DETECTION_DESTINATION_IP},
@@ -154,6 +160,9 @@ static payload_rule_t ike_sa_init_r_rules[] = {
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	TRUE},
 	{PLV2_SECURITY_ASSOCIATION,		1,	1,						FALSE,	FALSE},
 	{PLV2_KEY_EXCHANGE,				1,	1,						FALSE,	FALSE},
+#ifdef QSKE
+    {PLV2_QSKEY_EXCHANGE,           1,  1,                      FALSE,  FALSE},
+#endif
 	{PLV2_NONCE,					1,	1,						FALSE,	FALSE},
 	{PLV2_CERTREQ,					0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
@@ -166,6 +175,9 @@ static payload_order_t ike_sa_init_r_order[] = {
 /*	payload type					notify type */
 	{PLV2_SECURITY_ASSOCIATION,		0},
 	{PLV2_KEY_EXCHANGE,				0},
+#ifdef QSKE
+    {PLV2_QSKEY_EXCHANGE,           0},
+#endif
 	{PLV2_NONCE,					0},
 	{PLV2_NOTIFY,					NAT_DETECTION_SOURCE_IP},
 	{PLV2_NOTIFY,					NAT_DETECTION_DESTINATION_IP},
@@ -340,6 +352,9 @@ static payload_rule_t create_child_sa_i_rules[] = {
 	{PLV2_SECURITY_ASSOCIATION,		1,	1,						TRUE,	FALSE},
 	{PLV2_NONCE,					1,	1,						TRUE,	FALSE},
 	{PLV2_KEY_EXCHANGE,				0,	1,						TRUE,	FALSE},
+#ifdef QSKE
+    {PLV2_QSKEY_EXCHANGE,           0,  1,                      TRUE,   FALSE},
+#endif
 	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
 	{PLV2_TS_RESPONDER,				0,	1,						TRUE,	FALSE},
 	{PLV2_CONFIGURATION,			0,	1,						TRUE,	FALSE},
@@ -359,6 +374,9 @@ static payload_order_t create_child_sa_i_order[] = {
 	{PLV2_SECURITY_ASSOCIATION,		0},
 	{PLV2_NONCE,					0},
 	{PLV2_KEY_EXCHANGE,				0},
+#ifdef QSKE
+    {PLV2_QSKEY_EXCHANGE,           0},
+#endif
 	{PLV2_TS_INITIATOR,				0},
 	{PLV2_TS_RESPONDER,				0},
 	{PLV2_NOTIFY,					0},
@@ -375,6 +393,9 @@ static payload_rule_t create_child_sa_r_rules[] = {
 	{PLV2_SECURITY_ASSOCIATION,		1,	1,						TRUE,	FALSE},
 	{PLV2_NONCE,					1,	1,						TRUE,	FALSE},
 	{PLV2_KEY_EXCHANGE,				0,	1,						TRUE,	FALSE},
+#ifdef QSKE
+    {PLV2_QSKEY_EXCHANGE,           0,  1,                      TRUE,   FALSE},
+#endif
 	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
 	{PLV2_TS_RESPONDER,				0,	1,						TRUE,	FALSE},
 	{PLV2_CONFIGURATION,			0,	1,						TRUE,	FALSE},
@@ -393,6 +414,9 @@ static payload_order_t create_child_sa_r_order[] = {
 	{PLV2_SECURITY_ASSOCIATION,		0},
 	{PLV2_NONCE,					0},
 	{PLV2_KEY_EXCHANGE,				0},
+#ifdef QSKE
+    {PLV2_QSKEY_EXCHANGE,           0},
+#endif
 	{PLV2_TS_INITIATOR,				0},
 	{PLV2_TS_RESPONDER,				0},
 	{PLV2_NOTIFY,					ADDITIONAL_TS_POSSIBLE},

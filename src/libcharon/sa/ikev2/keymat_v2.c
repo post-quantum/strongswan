@@ -300,10 +300,16 @@ failure:
 
 METHOD(keymat_v2_t, derive_ike_keys, bool,
 	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+#ifdef QSKE
+	diffie_hellman_t *qs_dh,
+#endif
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
 	chunk_t skeyseed, key, secret, full_nonce, fixed_nonce, prf_plus_seed;
+#ifdef QSKE
+	chunk_t dh_secret, qs_dh_secret;
+#endif
 	chunk_t spi_i, spi_r;
 	prf_plus_t *prf_plus = NULL;
 	uint16_t alg, key_size, int_alg;
@@ -312,10 +318,52 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	spi_i = chunk_alloca(sizeof(uint64_t));
 	spi_r = chunk_alloca(sizeof(uint64_t));
 
+#ifdef QSKE
+	if (dh)
+	{
+		/* We have classical Diffie-Hellman shared secret */
+		if (!dh->get_shared_secret(dh, &dh_secret))
+		{
+			return FALSE;
+		}
+		DBG4(DBG_IKE, "shared DH secret : %B", &dh_secret);
+		if (qs_dh)
+		{
+			/* We also have a quantum-safe shared secret */
+			if (!qs_dh->get_shared_secret(qs_dh, &qs_dh_secret))
+			{
+				return FALSE;
+			}
+			DBG4(DBG_IKE, "shared QS secret : %B", &qs_dh_secret);
+			secret = chunk_cat("ss", dh_secret, qs_dh_secret);
+			DBG4(DBG_IKE, "shared DH | QS secret : %B", &secret);
+		}
+		else
+		{
+			secret = chunk_cat("s", dh_secret);
+			DBG4(DBG_IKE, "shared DH secret : %B", &secret);
+		}
+	}
+	else if (qs_dh)
+	{
+		if (!qs_dh->get_shared_secret(qs_dh, &secret))
+		{
+			return FALSE;
+		}
+		DBG4(DBG_IKE, "shared QS secret : %B", &secret);
+	}
+	else
+	{
+		DBG1(DBG_IKE,
+			"No classical nor quantum-safe key-exchange secret is provided");
+		return FALSE;
+	}
+#else
 	if (!dh->get_shared_secret(dh, &secret))
 	{
 		return FALSE;
 	}
+#endif
 
 	/* Create SAs general purpose PRF first, we may use it here */
 	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL))
@@ -495,6 +543,9 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 {
 	uint16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
 	chunk_t seed, secret = chunk_empty;
+#ifdef QSKE
+	chunk_t dh_secret, qske_secret;
+#endif
 	prf_plus_t *prf_plus;
 
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
@@ -574,6 +625,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		}
 		DBG4(DBG_CHD, "DH secret %B", &secret);
 	}
+
 	seed = chunk_cata("scc", secret, nonce_i, nonce_r);
 	DBG4(DBG_CHD, "seed %B", &seed);
 

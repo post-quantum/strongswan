@@ -186,6 +186,58 @@ METHOD(proposal_t, strip_dh, void,
 	enumerator->destroy(enumerator);
 }
 
+#ifdef QSKE
+METHOD(proposal_t, has_qs_dh_group, bool,
+       private_proposal_t *this, diffie_hellman_group_t group)
+{
+#if 0
+	bool found = FALSE, any = FALSE;
+	enumerator_t *enumerator;
+	uint16_t current;
+
+	enumerator = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
+	while (enumerator->enumerate(enumerator, &current, NULL))
+	{
+		any = TRUE;
+		if (current == group)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!any && group == MODP_NONE)
+	{
+		found = TRUE;
+	}
+	DBG1(DBG_IKE, "\n# has_qs_dh_group: %d\n\n", found);
+	return found;
+#else
+	/* FIXME: Until we fix the configuration, this hack will be used */
+	return TRUE;
+#endif
+}
+
+METHOD(proposal_t, strip_qs_dh, void,
+       private_proposal_t *this, diffie_hellman_group_t keep)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+
+	enumerator = array_create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->type == DIFFIE_HELLMAN_GROUP &&
+			entry->alg != keep)
+		{
+			array_remove_at(this->transforms, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+#endif
+
 /**
  * Select a matching proposal from this and other, insert into selected.
  */
@@ -714,6 +766,10 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 			.get_algorithm = _get_algorithm,
 			.has_dh_group = _has_dh_group,
 			.strip_dh = _strip_dh,
+#ifdef QSKE
+			.has_qs_dh_group = _has_qs_dh_group,
+			.strip_qs_dh = _strip_qs_dh,
+#endif
 			.select = _select_proposal,
 			.get_protocol = _get_protocol,
 			.set_spi = _set_spi,

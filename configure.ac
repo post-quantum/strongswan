@@ -141,6 +141,7 @@ ARG_ENABL_SET([mgf1],           [enable the MGF1 software implementation plugin.
 ARG_ENABL_SET([newhope],        [enable New Hope crypto plugin.])
 ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
 ARG_ENABL_SET([ntru],           [enables the NTRU crypto plugin.])
+ARG_ENABL_SET([hybrid-quantum-safe], [enable hybrid quantum-safe key-exchange.])
 ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
 ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
 ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
@@ -1375,6 +1376,7 @@ ADD_PLUGIN([gcm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ntru],                 [s charon scripts nm cmd])
 ADD_PLUGIN([newhope],              [s charon scripts nm cmd])
 ADD_PLUGIN([bliss],                [s charon pki scripts nm cmd])
+ADD_PLUGIN([hybrid-quantum-safe],  [s charon scripts nm cmd])
 ADD_PLUGIN([curl],                 [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([files],                [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([winhttp],              [s charon pki scripts])
@@ -1536,6 +1538,7 @@ AM_CONDITIONAL(USE_AF_ALG, test x$af_alg = xtrue)
 AM_CONDITIONAL(USE_NTRU, test x$ntru = xtrue)
 AM_CONDITIONAL(USE_NEWHOPE, test x$newhope = xtrue)
 AM_CONDITIONAL(USE_BLISS, test x$bliss = xtrue)
+AM_CONDITIONAL(QSKE, test x$hybrid_quantum_safe = xtrue)
 
 #  charon plugins
 # ----------------
@@ -1703,6 +1706,9 @@ if test x$ikev1 = xtrue; then
 fi
 if test x$ikev2 = xtrue; then
 	AC_DEFINE([USE_IKEV2], [], [support for IKEv2 protocol])
+fi
+if test x$hybrid_quantum_safe = xtrue; then
+	AC_DEFINE([QSKE], [], [support for hybrid quantum-safe key exchange])
 fi
 
 # ====================================================
