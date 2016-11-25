@@ -1066,7 +1066,7 @@ METHOD(task_t, migrate, void,
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 #ifdef QSKE
-	this->qs_keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
+	this->qs_keymat = (keymat_v2_t*)ike_sa->get_qs_keymat(ike_sa);
 #endif
 	this->proposal = NULL;
 	this->dh_failed = FALSE;
@@ -1141,7 +1141,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 #ifdef QSKE
 		/* FIXME: Hard-wired to NewHope-128 at the moment */
 		.qs_dh_group = NH_128_BIT,
-		.qs_keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
+		.qs_keymat = (keymat_v2_t*)ike_sa->get_qs_keymat(ike_sa),
 #endif
 		.old_sa = old_sa,
 		.signature_authentication = lib->settings->get_bool(lib->settings,

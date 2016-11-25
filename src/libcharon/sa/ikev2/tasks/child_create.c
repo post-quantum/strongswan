@@ -23,6 +23,9 @@
 #include <credentials/certificates/x509.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
+#ifdef QSKE
+#include <encoding/payloads/qske_payload.h>
+#endif
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/notify_payload.h>
@@ -122,6 +125,28 @@ struct private_child_create_t {
 	 * IKE_SAs keymat
 	 */
 	keymat_v2_t *keymat;
+
+#ifdef QSKE
+	/**
+	 * optional quantum-safe diffie hellman exchange
+	 */
+	diffie_hellman_t *qs_dh;
+
+	/**
+	 * Applying QS DH public value failed?
+	 */
+	bool qs_dh_failed;
+
+	/**
+	 * group used for DH exchange
+	 */
+	diffie_hellman_group_t qs_dh_group;
+
+	/**
+	 * IKE_SAs quantum-safe keymat
+	 */
+	keymat_v2_t *qs_keymat;
+#endif
 
 	/**
 	 * mode the new CHILD_SA uses (transport/tunnel/beet)
@@ -540,6 +565,28 @@ static status_t select_and_install(private_child_create_t *this,
 		this->dh_group = MODP_NONE;
 	}
 
+#ifdef QSKE
+	if (!this->proposal->has_qs_dh_group(this->proposal, this->qs_dh_group))
+	{
+		uint16_t group;
+
+		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
+										  &group, NULL))
+		{
+			DBG1(DBG_IKE, "QS DH group %N inacceptable, requesting %N",
+				 diffie_hellman_group_names, this->qs_dh_group,
+				 diffie_hellman_group_names, group);
+			this->qs_dh_group = group;
+			return INVALID_ARG;
+		}
+		/* the selected proposal does not use a QS DH group */
+		DBG1(DBG_IKE, "ignoring QS KE exchange, agreed on a non-PFS proposal");
+		DESTROY_IF(this->qs_dh);
+		this->qs_dh = NULL;
+		this->qs_dh_group = MODP_NONE;
+	}
+#endif
+
 	if (this->initiator)
 	{
 		nonce_i = this->my_nonce;
@@ -644,8 +691,14 @@ static status_t select_and_install(private_child_create_t *this,
 		this->ipcomp = IPCOMP_NONE;
 	}
 	status_i = status_o = FAILED;
+#ifdef QSKE
+	if (this->keymat->derive_child_keys(this->keymat, this->proposal,
+			this->dh, this->qs_dh, nonce_i, nonce_r,
+			&encr_i, &integ_i, &encr_r, &integ_r))
+#else
 	if (this->keymat->derive_child_keys(this->keymat, this->proposal,
 			this->dh, nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r))
+#endif
 	{
 		if (this->initiator)
 		{
@@ -769,6 +822,9 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
 	sa_payload_t *sa_payload;
 	nonce_payload_t *nonce_payload;
 	ke_payload_t *ke_payload;
+#ifdef QSKE
+	qske_payload_t *qske_payload;
+#endif
 	ts_payload_t *ts_payload;
 	kernel_feature_t features;
 
@@ -803,6 +859,21 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
 		}
 		message->add_payload(message, (payload_t*)ke_payload);
 	}
+
+#ifdef QSKE
+	/* quantum-safe diffie hellman exchange, if PFS enabled */
+	if (this->qs_dh)
+	{
+		qske_payload = qske_payload_create_from_diffie_hellman(
+							PLV2_QSKEY_EXCHANGE, this->qs_dh);
+		if (!qske_payload)
+		{
+			DBG1(DBG_IKE, "creating QSKE payload failed");
+			return FALSE;
+		}
+		message->add_payload(message, (payload_t*)qske_payload);
+	}
+#endif
 
 	/* add TSi/TSr payloads */
 	ts_payload = ts_payload_create_from_traffic_selectors(TRUE, this->tsi);
@@ -917,6 +988,9 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 	payload_t *payload;
 	sa_payload_t *sa_payload;
 	ke_payload_t *ke_payload;
+#ifdef QSKE
+	qske_payload_t *qske_payload;
+#endif
 	ts_payload_t *ts_payload;
 
 	/* defaults to TUNNEL mode */
@@ -945,6 +1019,26 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 								ke_payload->get_key_exchange_data(ke_payload));
 				}
 				break;
+#ifdef QSKE
+			case PLV2_QSKEY_EXCHANGE:
+				qske_payload = (qske_payload_t*)payload;
+				if (!this->initiator)
+				{
+					this->qs_dh_group = qske_payload->get_dh_group_number(
+											qske_payload);
+					this->qs_dh = this->qs_keymat->keymat.create_dh(
+							  		&this->qs_keymat->keymat,
+									this->qs_dh_group);
+				}
+				if (this->qs_dh)
+				{
+					this->qs_dh_failed = !this->qs_dh->set_other_public_value(
+								this->qs_dh,
+								qske_payload->get_key_exchange_data(
+									qske_payload));
+				}
+				break;
+#endif
 			case PLV2_TS_INITIATOR:
 				ts_payload = (ts_payload_t*)payload;
 				this->tsi = ts_payload->get_traffic_selectors(ts_payload);
@@ -985,6 +1079,10 @@ METHOD(task_t, build_i, status_t,
 			if (!this->retry)
 			{
 				this->dh_group = this->config->get_dh_group(this->config);
+#ifdef QSKE
+				this->qs_dh_group = this->config->get_qs_dh_group(
+										this->config);
+#endif
 			}
 			break;
 		case IKE_AUTH:
@@ -1072,6 +1170,14 @@ METHOD(task_t, build_i, status_t,
 		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
 												  this->dh_group);
 	}
+
+#ifdef QSKE
+	if (this->qs_dh_group != MODP_NONE)
+	{
+		this->qs_dh = this->qs_keymat->keymat.create_dh(
+							&this->qs_keymat->keymat, this->qs_dh_group);
+	}
+#endif
 
 	if (this->config->use_ipcomp(this->config))
 	{
@@ -1244,7 +1350,15 @@ METHOD(task_t, build_r, status_t,
 									chunk_empty);
 				return SUCCESS;
 			}
+#ifdef QSKE
+			/** FIXME:
+			 *  The following code-block isn't correct if the aim
+			 *  is to support DH, QS and DH+QS
+			 **/
+			if (this->dh_failed || this->qs_dh_failed)
+#else
 			if (this->dh_failed)
+#endif
 			{
 				DBG1(DBG_IKE, "applying DH public value failed");
 				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN,
@@ -1555,7 +1669,15 @@ METHOD(task_t, process_i, status_t,
 		return delete_failed_sa(this);
 	}
 
+#ifdef QSKE
+	/** FIXME:
+	 *  The following code-block isn't correct if the aim
+	 *  is to support DH, QS and DH+QS
+	 **/
+	if (this->dh_failed || this->qs_dh_failed)
+#else
 	if (this->dh_failed)
+#endif
 	{
 		DBG1(DBG_IKE, "applying DH public value failed");
 		handle_child_sa_failure(this, message);
@@ -1640,6 +1762,10 @@ METHOD(task_t, migrate, void,
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->nonceg);
 	DESTROY_IF(this->dh);
+#ifdef QSKE
+	DESTROY_IF(this->qs_dh);
+	this->qs_dh_failed = FALSE;
+#endif
 	this->dh_failed = FALSE;
 	if (this->proposals)
 	{
@@ -1648,11 +1774,17 @@ METHOD(task_t, migrate, void,
 
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
+#ifdef QSKE
+	this->qs_keymat = (keymat_v2_t*)ike_sa->get_qs_keymat(ike_sa);
+#endif
 	this->proposal = NULL;
 	this->proposals = NULL;
 	this->tsi = NULL;
 	this->tsr = NULL;
 	this->dh = NULL;
+#ifdef QSKE
+	this->qs_dh = NULL;
+#endif
 	this->nonceg = NULL;
 	this->child_sa = NULL;
 	this->mode = MODE_TUNNEL;
@@ -1686,6 +1818,9 @@ METHOD(task_t, destroy, void,
 	DESTROY_IF(this->packet_tsr);
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->dh);
+#ifdef QSKE
+	DESTROY_IF(this->qs_dh);
+#endif
 	if (this->proposals)
 	{
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
@@ -1723,7 +1858,13 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		.packet_tsi = tsi ? tsi->clone(tsi) : NULL,
 		.packet_tsr = tsr ? tsr->clone(tsr) : NULL,
 		.dh_group = MODP_NONE,
+#ifdef QSKE
+		.qs_dh_group = MODP_NONE,
+#endif
 		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
+#ifdef QSKE
+		.qs_keymat = (keymat_v2_t*)ike_sa->get_qs_keymat(ike_sa),
+#endif
 		.mode = MODE_TUNNEL,
 		.tfcv3 = TRUE,
 		.ipcomp = IPCOMP_NONE,

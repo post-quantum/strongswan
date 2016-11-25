@@ -671,6 +671,9 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	chunk_t encr_i, integ_i, encr_r, integ_r;
 	linked_list_t *local_ts, *remote_ts;
 	diffie_hellman_t *dh = NULL;
+#ifdef QSKE
+	diffie_hellman_t *qs_dh = NULL;
+#endif
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -781,6 +784,9 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 
 		ok = keymat_v2->derive_child_keys(keymat_v2, proposal, dh,
+#ifdef QSKE
+						qs_dh,
+#endif
 						nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r);
 	}
 	if (ike_sa->get_version(ike_sa) == IKEV1)

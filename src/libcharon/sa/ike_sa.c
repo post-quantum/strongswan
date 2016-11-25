@@ -206,6 +206,13 @@ struct private_ike_sa_t {
 	 */
 	keymat_t *keymat;
 
+#ifdef QSKE
+	/**
+	 * quantum-safe keymat of this IKE_SA
+	 */
+	keymat_t *qs_keymat;
+#endif
+
 	/**
 	 * Virtual IPs on local host
 	 */
@@ -930,6 +937,12 @@ METHOD(ike_sa_t, reset, void,
 	this->keymat = keymat_create(this->version,
 							this->ike_sa_id->is_initiator(this->ike_sa_id));
 
+#ifdef QSKE
+	this->qs_keymat->destroy(this->qs_keymat);
+	this->qs_keymat = keymat_create(this->version,
+							this->ike_sa_id->is_initiator(this->ike_sa_id));
+#endif
+
 	this->task_manager->reset(this->task_manager, 0, 0);
 	this->task_manager->queue_ike(this->task_manager);
 }
@@ -939,6 +952,14 @@ METHOD(ike_sa_t, get_keymat, keymat_t*,
 {
 	return this->keymat;
 }
+
+#ifdef QSKE
+METHOD(ike_sa_t, get_qs_keymat, keymat_t*,
+	private_ike_sa_t *this)
+{
+	return this->qs_keymat;
+}
+#endif
 
 METHOD(ike_sa_t, add_virtual_ip, void,
 	private_ike_sa_t *this, bool local, host_t *ip)
@@ -2846,6 +2867,9 @@ METHOD(ike_sa_t, destroy, void,
 	array_destroy(this->child_sas);
 	DESTROY_IF(this->task_manager);
 	DESTROY_IF(this->keymat);
+#ifdef QSKE
+	DESTROY_IF(this->qs_keymat);
+#endif
 	array_destroy(this->attributes);
 	array_destroy(this->my_vips);
 	array_destroy(this->other_vips);
@@ -2954,6 +2978,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.handle_redirect = _handle_redirect,
 			.get_redirected_from = _get_redirected_from,
 			.get_keymat = _get_keymat,
+#ifdef QSKE
+			.get_qs_keymat = _get_qs_keymat,
+#endif
 			.add_child_sa = _add_child_sa,
 			.get_child_sa = _get_child_sa,
 			.get_child_count = _get_child_count,
@@ -3002,6 +3029,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.my_id = identification_create_from_encoding(ID_ANY, chunk_empty),
 		.other_id = identification_create_from_encoding(ID_ANY, chunk_empty),
 		.keymat = keymat_create(version, initiator),
+#ifdef QSKE
+		.qs_keymat = keymat_create(version, initiator),
+#endif
 		.state = IKE_CREATED,
 		.stats[STAT_INBOUND] = time_monotonic(NULL),
 		.stats[STAT_OUTBOUND] = time_monotonic(NULL),

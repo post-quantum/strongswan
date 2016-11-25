@@ -508,6 +508,32 @@ METHOD(child_cfg_t, get_dh_group, diffie_hellman_group_t,
 	return dh_group;
 }
 
+#ifdef QSKE
+METHOD(child_cfg_t, get_qs_dh_group, diffie_hellman_group_t,
+	private_child_cfg_t *this)
+{
+#if 0
+	enumerator_t *enumerator;
+	proposal_t *proposal;
+	uint16_t dh_group = MODP_NONE;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
+	{
+		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return dh_group;
+#else
+	/* Default to 128-bit NewHope */
+	return NH_128_BIT;
+#endif
+}
+#endif
+
 METHOD(child_cfg_t, use_ipcomp, bool,
 	private_child_cfg_t *this)
 {
@@ -679,6 +705,9 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_close_action = _get_close_action,
 			.get_lifetime = _get_lifetime,
 			.get_dh_group = _get_dh_group,
+#ifdef QSKE
+			.get_qs_dh_group = _get_qs_dh_group,
+#endif
 			.use_ipcomp = _use_ipcomp,
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,

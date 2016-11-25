@@ -83,6 +83,9 @@ struct keymat_v2_t {
 	 */
 	bool (*derive_child_keys)(keymat_v2_t *this,
 							  proposal_t *proposal, diffie_hellman_t *dh,
+#ifdef QSKE
+							  diffie_hellman_t *qs_dh,
+#endif
 							  chunk_t nonce_i, chunk_t nonce_r,
 							  chunk_t *encr_i, chunk_t *integ_i,
 							  chunk_t *encr_r, chunk_t *integ_r);

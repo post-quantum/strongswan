@@ -538,13 +538,16 @@ failure:
 
 METHOD(keymat_v2_t, derive_child_keys, bool,
 	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+#ifdef QSKE
+	diffie_hellman_t *qs_dh,
+#endif
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	uint16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
 	chunk_t seed, secret = chunk_empty;
 #ifdef QSKE
-	chunk_t dh_secret, qske_secret;
+	chunk_t dh_secret, qs_dh_secret;
 #endif
 	prf_plus_t *prf_plus;
 
@@ -617,6 +620,41 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		return FALSE;
 	}
 
+#ifdef QSKE
+	if (dh)
+	{
+		/* We have classical Diffie-Hellman shared secret */
+		if (!dh->get_shared_secret(dh, &dh_secret))
+		{
+			return FALSE;
+		}
+		DBG4(DBG_CHD, "shared DH secret : %B", &dh_secret);
+		if (qs_dh)
+		{
+			/* We also have a quantum-safe shared secret */
+			if (!qs_dh->get_shared_secret(qs_dh, &qs_dh_secret))
+			{
+				return FALSE;
+			}
+			DBG4(DBG_CHD, "shared QS secret : %B", &qs_dh_secret);
+			secret = chunk_cat("ss", dh_secret, qs_dh_secret);
+			DBG4(DBG_CHD, "shared DH | QS secret : %B", &secret);
+		}
+		else
+		{
+			secret = chunk_cat("s", dh_secret);
+			DBG4(DBG_CHD, "shared DH secret : %B", &secret);
+		}
+	}
+	else if (qs_dh)
+	{
+		if (!qs_dh->get_shared_secret(qs_dh, &secret))
+		{
+			return FALSE;
+		}
+		DBG4(DBG_CHD, "shared QS secret : %B", &secret);
+	}
+#else
 	if (dh)
 	{
 		if (!dh->get_shared_secret(dh, &secret))
@@ -625,6 +663,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		}
 		DBG4(DBG_CHD, "DH secret %B", &secret);
 	}
+#endif
 
 	seed = chunk_cata("scc", secret, nonce_i, nonce_r);
 	DBG4(DBG_CHD, "seed %B", &seed);
