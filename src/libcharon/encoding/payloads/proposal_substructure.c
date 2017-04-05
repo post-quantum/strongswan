@@ -1004,6 +1004,7 @@ METHOD(proposal_substructure_t, get_proposals, void,
 	enumerator = this->transforms->create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &transform))
 	{
+		DBG1(DBG_CFG, "payload enum trans type=%d id=%d", transform->get_transform_type_or_number(transform), transform->get_transform_id(transform));
 		if (!proposal)
 		{
 			proposal = proposal_create(this->protocol_id, this->proposal_number);

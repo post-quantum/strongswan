@@ -257,6 +257,11 @@
 			attributes = {
 				LastUpgradeCheck = 0620;
 				ORGANIZATIONNAME = "revosec AG";
+				TargetAttributes = {
+					5BD1CCD01726DB4000587077 = {
+						DevelopmentTeam = 5A8ZV6GP54;
+					};
+				};
 			};
 			buildConfigurationList = 5BD1CCA61726DB0100587077 /* Build configuration list for PBXProject "strongSwan" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -437,8 +442,9 @@
 		5BD1CCCB1726DB0200587077 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "strongSwan/strongSwan-Prefix.pch";
 				INFOPLIST_FILE = "strongSwan/strongSwan-Info.plist";
@@ -453,9 +459,10 @@
 		5BD1CCCC1726DB0200587077 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
+				DEVELOPMENT_TEAM = "";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "strongSwan/strongSwan-Prefix.pch";
 				INFOPLIST_FILE = "strongSwan/strongSwan-Info.plist";
@@ -470,7 +477,8 @@
 		5BD1CCDB1726DB4000587077 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				DEVELOPMENT_TEAM = 5A8ZV6GP54;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
 				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
@@ -482,6 +490,7 @@
 				INFOPLIST_FILE = "charon-xpc/charon-xpc-Info.plist";
 				INSTALL_PATH = /;
 				LIBRARY_SEARCH_PATHS = (
+					/usr/local/lib,
 					/usr/lib,
 					../../libstrongswan/.libs,
 					../../libcharon/.libs,
@@ -493,12 +502,9 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lcrypto",
-					"-force_load",
-					../../libstrongswan/.libs/libstrongswan.a,
-					"-force_load",
-					../../libipsec/.libs/libipsec.a,
-					"-force_load",
-					../../libcharon/.libs/libcharon.a,
+					"-lcharon",
+					"-lipsec",
+					"-lstrongswan",
 					"-sectcreate",
 					__TEXT,
 					__info_plist,
@@ -518,8 +524,9 @@
 		5BD1CCDC1726DB4000587077 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Mac Developer";
 				COPY_PHASE_STRIP = NO;
+				DEVELOPMENT_TEAM = 5A8ZV6GP54;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
 				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
@@ -531,6 +538,7 @@
 				INFOPLIST_FILE = "charon-xpc/charon-xpc-Info.plist";
 				INSTALL_PATH = /;
 				LIBRARY_SEARCH_PATHS = (
+					/usr/local/lib,
 					/usr/lib,
 					../../libstrongswan/.libs,
 					../../libcharon/.libs,
@@ -542,12 +550,9 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lcrypto",
-					"-force_load",
-					../../libstrongswan/.libs/libstrongswan.a,
-					"-force_load",
-					../../libipsec/.libs/libipsec.a,
-					"-force_load",
-					../../libcharon/.libs/libcharon.a,
+					"-lcharon",
+					"-lipsec",
+					"-lstrongswan",
 					"-sectcreate",
 					__TEXT,
 					__info_plist,

@@ -373,12 +373,30 @@ METHOD(ike_cfg_t, get_dh_group, diffie_hellman_group_t,
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
+		if (proposal->get_algorithm_dh(proposal, true, false, &dh_group, NULL))
 		{
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
+
+#ifdef QSKE
+	// If we have no DH group then check for a QS DH group i.e. a non-hybrid proposal
+	// that happens to use a QS DH group
+	if (dh_group == MODP_NONE) 
+	{
+		enumerator = this->proposals->create_enumerator(this->proposals);
+		while (enumerator->enumerate(enumerator, &proposal))
+		{
+			if (proposal->get_algorithm_dh(proposal, false, true, &dh_group, NULL))
+			{
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+#endif
+
 	return dh_group;
 }
 
@@ -386,30 +404,45 @@ METHOD(ike_cfg_t, get_dh_group, diffie_hellman_group_t,
 METHOD(ike_cfg_t, get_qs_dh_group, diffie_hellman_group_t,
        private_ike_cfg_t *this)
 {
-#if 0
 	enumerator_t *enumerator;
 	proposal_t *proposal;
-	/* Default to 128-bit NewHope */
-	uint16_t dh_group = NH_128_BIT;
+	uint16_t qs_dh_group = MODP_NONE;
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
+		if (proposal->get_algorithm_dh(proposal, false, true, &qs_dh_group, NULL))
 		{
-			/* We are only interested in quantum-safe primitives */
-			if (dh_group >= NTRU_112_BIT && dh_group <= NH_128_BIT)
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	// If we have a QS DH group, but no DH group, then this is a non-hybrid proposal
+	// and we should return MODP_NONE from here cos the QS DH group will be returned
+	// by get_dh_group(), not get_qs_dh_group().
+	//
+	// i.e. get_qs_dh_group() should only return valid DH methods for hybrid proposals.
+	//
+	if (qs_dh_group != MODP_NONE)
+	{
+		uint16_t dh_group = MODP_NONE;
+		enumerator = this->proposals->create_enumerator(this->proposals);
+		while (enumerator->enumerate(enumerator, &proposal))
+		{
+			if (proposal->get_algorithm_dh(proposal, true, false, &dh_group, NULL))
 			{
 				break;
 			}
 		}
+		enumerator->destroy(enumerator);
+		if (dh_group == MODP_NONE) 
+		{
+			qs_dh_group = MODP_NONE;
+		}
 	}
-	enumerator->destroy(enumerator);
-	return dh_group;
-#else
-	/* Default to 128-bit NewHope */
-	return NH_128_BIT;
-#endif
+
+	return qs_dh_group;
 }
 #endif
 

@@ -58,6 +58,11 @@ struct qske_payload_t {
 	diffie_hellman_group_t (*get_dh_group_number) (qske_payload_t *this);
 
 	/**
+	 * Appends the key exchange data from the secondary payload to this one
+	 */
+	void (*append_secondary_qske_payload) (qske_payload_t *this, qske_payload_t *secondary);
+
+	/**
 	 * Destroys a qske_payload_t object.
 	 */
 	void (*destroy) (qske_payload_t *this);
@@ -72,13 +77,16 @@ struct qske_payload_t {
 qske_payload_t *qske_payload_create(payload_type_t type);
 
 /**
- * Creates a qske_payload_t from a diffie_hellman_t.
+ * Creates one or more qske_payload_t from a diffie_hellman_t.
+ * (large qs key_exchange_data means we need multiple payloads)
  *
  * @param type		PLV2_KEY_EXCHANGE or PLV1_KEY_EXCHANGE
  * @param dh		diffie hellman object containing group and key
- * @return 			qske_payload_t object, NULL on error
+ * @param payloads	points to returned array of qske_payload_t*
+ * @return 			number of payloads in the array, 0 on error
  */
-qske_payload_t *qske_payload_create_from_diffie_hellman(payload_type_t type,
-								  						diffie_hellman_t *dh);
+int qske_payload_create_from_diffie_hellman(payload_type_t type,
+								  						diffie_hellman_t *dh, 
+														  qske_payload_t ***payloads);
 
 #endif /** QSKE_PAYLOAD_H_ @}*/

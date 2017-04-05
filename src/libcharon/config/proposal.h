@@ -101,6 +101,8 @@ struct proposal_t {
 	 */
 	bool (*get_algorithm) (proposal_t *this, transform_type_t type,
 						   uint16_t *alg, uint16_t *key_size);
+	bool (*get_algorithm_dh) (proposal_t *this, bool allow_non_qs, bool allow_qs,
+						   uint16_t *alg, uint16_t *key_size);
 
 	/**
 	 * Check if the proposal has a specific DH group.
@@ -125,6 +127,8 @@ struct proposal_t {
 	 * @return              TRUE if algorithm included
 	 */
     bool (*has_qs_dh_group) (proposal_t *this, diffie_hellman_group_t group);
+
+	uint16_t (*get_dh_group) (proposal_t *this, bool qs);
 
     /**
      * Strip QS DH groups from proposal to use it without PFS.

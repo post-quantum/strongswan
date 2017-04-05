@@ -141,6 +141,35 @@ METHOD(proposal_t, get_algorithm, bool,
 
 	return found;
 }
+METHOD(proposal_t, get_algorithm_dh, bool,
+	private_proposal_t *this, bool allow_non_qs, bool allow_qs,
+	uint16_t *alg, uint16_t *key_size)
+{
+	enumerator_t *enumerator;
+	bool found = FALSE;
+
+	enumerator = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
+	while (enumerator->enumerate(enumerator, alg, key_size))
+	{
+		if (allow_non_qs && !DH_IS_QUANTUM_SAFE(*alg)) 
+		{
+			found = TRUE;
+			break;
+		}
+		if (allow_qs && DH_IS_QUANTUM_SAFE(*alg)) 
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+    if (!found)
+    {
+        *alg = MODP_NONE;
+    }
+	return found;
+}
 
 METHOD(proposal_t, has_dh_group, bool,
 	private_proposal_t *this, diffie_hellman_group_t group)
@@ -190,7 +219,6 @@ METHOD(proposal_t, strip_dh, void,
 METHOD(proposal_t, has_qs_dh_group, bool,
        private_proposal_t *this, diffie_hellman_group_t group)
 {
-#if 0
 	bool found = FALSE, any = FALSE;
 	enumerator_t *enumerator;
 	uint16_t current;
@@ -198,11 +226,14 @@ METHOD(proposal_t, has_qs_dh_group, bool,
 	enumerator = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
 	while (enumerator->enumerate(enumerator, &current, NULL))
 	{
-		any = TRUE;
-		if (current == group)
+		if (DH_IS_QUANTUM_SAFE(current))
 		{
-			found = TRUE;
-			break;
+			any = TRUE;
+			if (current == group)
+			{
+				found = TRUE;
+				break;
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -213,10 +244,6 @@ METHOD(proposal_t, has_qs_dh_group, bool,
 	}
 	DBG1(DBG_IKE, "\n# has_qs_dh_group: %d\n\n", found);
 	return found;
-#else
-	/* FIXME: Until we fix the configuration, this hack will be used */
-	return TRUE;
-#endif
 }
 
 METHOD(proposal_t, strip_qs_dh, void,
@@ -229,6 +256,7 @@ METHOD(proposal_t, strip_qs_dh, void,
 	while (enumerator->enumerate(enumerator, &entry))
 	{
 		if (entry->type == DIFFIE_HELLMAN_GROUP &&
+			DH_IS_QUANTUM_SAFE(entry->alg) &&
 			entry->alg != keep)
 		{
 			array_remove_at(this->transforms, enumerator);
@@ -236,7 +264,31 @@ METHOD(proposal_t, strip_qs_dh, void,
 	}
 	enumerator->destroy(enumerator);
 }
+
+
+METHOD(proposal_t, get_dh_group, uint16_t,
+       private_proposal_t *this, bool qs)
+{
+	bool found = FALSE;
+	enumerator_t *enumerator;
+	uint16_t current;
+
+	enumerator = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
+	while (enumerator->enumerate(enumerator, &current, NULL))
+	{
+		if (qs && !DH_IS_QUANTUM_SAFE(current)) continue;
+		if (!qs && DH_IS_QUANTUM_SAFE(current)) continue;
+
+		found = TRUE;
+		break;
+	}
+	enumerator->destroy(enumerator);
+
+	return found ? current : MODP_NONE;
+}
+
 #endif
+
 
 /**
  * Select a matching proposal from this and other, insert into selected.
@@ -324,6 +376,79 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 	return found;
 }
 
+static bool select_algo_dh(private_proposal_t *this, proposal_t *other,
+						proposal_t *selected, bool qs, bool priv)
+{
+	enumerator_t *e1, *e2;
+	uint16_t alg1, alg2, ks1, ks2;
+	bool found = FALSE;
+
+
+
+	bool optional = this->protocol == PROTO_ESP || this->protocol == PROTO_AH;
+	
+	alg1 = _get_dh_group(this, qs);
+	alg2 = _get_dh_group((private_proposal_t*)other, qs);
+
+	if (!alg1)
+	{
+		if (!alg2)
+		{
+			found = TRUE;
+		}
+		else if (optional)
+		{
+			found = !alg2;
+		}
+	}
+	else if (!alg2)
+	{
+		if (optional)
+		{
+			found = !alg1;
+		}
+	}
+
+
+
+	e1 = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
+	/* compare algs, order of algs in "first" is preferred */
+	while (!found && e1->enumerate(e1, &alg1, &ks1))
+	{
+		if (qs && !DH_IS_QUANTUM_SAFE(alg1)) continue;
+		if (!qs && DH_IS_QUANTUM_SAFE(alg1)) continue;
+
+		e2 = other->create_enumerator(other, DIFFIE_HELLMAN_GROUP);
+		while (e2->enumerate(e2, &alg2, &ks2))
+		{
+			if (qs && !DH_IS_QUANTUM_SAFE(alg2)) continue;
+			if (!qs && DH_IS_QUANTUM_SAFE(alg2)) continue;
+
+			if (alg1 == alg2 && ks1 == ks2)
+			{
+				if (!priv && alg1 >= 1024)
+				{
+					/* accept private use algorithms only if requested */
+					DBG1(DBG_CFG, "an algorithm from private space would match, "
+						 "but peer implementation is unknown, skipped");
+					continue;
+				}
+				selected->add_algorithm(selected, DIFFIE_HELLMAN_GROUP, alg1, ks1);
+				found = TRUE;
+				break;
+			}
+		}
+		e2->destroy(e2);
+	}
+	e1->destroy(e1);
+
+	if (!found)
+	{
+		DBG2(DBG_CFG, "  no acceptable %N found", transform_type_names, DIFFIE_HELLMAN_GROUP);
+	}
+	return found;
+}
+
 METHOD(proposal_t, select_proposal, proposal_t*,
 	private_proposal_t *this, proposal_t *other, bool other_remote,
 	bool private)
@@ -353,7 +478,8 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 	if (!select_algo(this, other, selected, ENCRYPTION_ALGORITHM, private) ||
 		!select_algo(this, other, selected, PSEUDO_RANDOM_FUNCTION, private) ||
 		!select_algo(this, other, selected, INTEGRITY_ALGORITHM, private) ||
-		!select_algo(this, other, selected, DIFFIE_HELLMAN_GROUP, private) ||
+		!select_algo_dh(this, other, selected, false, private) ||
+		!select_algo_dh(this, other, selected, true, private) ||
 		!select_algo(this, other, selected, EXTENDED_SEQUENCE_NUMBERS, private))
 	{
 		selected->destroy(selected);
@@ -764,11 +890,13 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 			.add_algorithm = _add_algorithm,
 			.create_enumerator = _create_enumerator,
 			.get_algorithm = _get_algorithm,
+			.get_algorithm_dh = _get_algorithm_dh,
 			.has_dh_group = _has_dh_group,
 			.strip_dh = _strip_dh,
 #ifdef QSKE
 			.has_qs_dh_group = _has_qs_dh_group,
 			.strip_qs_dh = _strip_qs_dh,
+			.get_dh_group = _get_dh_group,
 #endif
 			.select = _select_proposal,
 			.get_protocol = _get_protocol,
@@ -987,6 +1115,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case NTRU_192_BIT:
 			case NTRU_256_BIT:
 			case NH_128_BIT:
+			case NTRU_PRIME_129_BIT:
 				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
 				break;
 			default:

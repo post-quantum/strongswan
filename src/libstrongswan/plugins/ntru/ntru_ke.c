@@ -294,7 +294,7 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 	DBG1(DBG_LIB, "%u bit %s NTRU parameter set %N selected", strength,
 				   parameter_set, ntru_param_set_id_names, param_set_id);
 
-	entropy = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
+	entropy = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!entropy)
 	{
 		DBG1(DBG_LIB, "could not attach entropy source for DRBG");

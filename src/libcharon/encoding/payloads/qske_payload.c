@@ -204,6 +204,14 @@ METHOD(qske_payload_t, get_dh_group_number, diffie_hellman_group_t,
 	return this->dh_group_number;
 }
 
+METHOD(qske_payload_t, append_secondary_qske_payload, void,
+	private_qske_payload_t *this, qske_payload_t *secondary)
+{
+	chunk_t chunk = chunk_cat("cc", this->key_exchange_data, secondary->get_key_exchange_data(secondary));
+	chunk_free(&this->key_exchange_data);
+	this->key_exchange_data = chunk;
+}
+
 METHOD2(payload_t, qske_payload_t, destroy, void,
 	private_qske_payload_t *this)
 {
@@ -232,6 +240,7 @@ qske_payload_t *qske_payload_create(payload_type_t type)
 			},
 			.get_key_exchange_data = _get_key_exchange_data,
 			.get_dh_group_number = _get_dh_group_number,
+			.append_secondary_qske_payload = _append_secondary_qske_payload,
 			.destroy = _destroy,
 		},
 		.next_payload = PL_NONE,
@@ -245,20 +254,51 @@ qske_payload_t *qske_payload_create(payload_type_t type)
 /*
  * Described in header
  */
-qske_payload_t *qske_payload_create_from_diffie_hellman(payload_type_t type,
-														diffie_hellman_t *dh)
+int qske_payload_create_from_diffie_hellman(payload_type_t type,
+								  						diffie_hellman_t *dh, 
+														  qske_payload_t ***payloads)
 {
-	private_qske_payload_t *this;
 	chunk_t value;
 
+	*payloads = NULL;
 	if (!dh->get_my_public_value(dh, &value))
 	{
-		return NULL;
+		return 0;
 	}
-	this = (private_qske_payload_t*)qske_payload_create(type);
-	this->key_exchange_data = value;
-	this->dh_group_number = dh->get_dh_group(dh);
-	this->payload_length += this->key_exchange_data.len;
 
-	return &this->public;
+#if defined(PQPERF)
+	printf("PQPERF: qske_payload data len = %lu\n", value.len);
+#endif
+
+	size_t max_payload_chunk_size = 65535 - offsetof(private_qske_payload_t, key_exchange_data);
+	
+	// Testing: enforce a small payload max size to test multipayloads
+	//max_payload_chunk_size = 64;
+
+	// Create enough payloads to hold the QS key exchange data
+	int num_payloads = (value.len + max_payload_chunk_size - 1) / max_payload_chunk_size;
+	int offset = 0;
+	int remaining = value.len;
+	if (num_payloads > 1) 
+	{
+		DBG0(DBG_ENC, "*** WARNING! QSKE payload splitting is likely broken **");
+	}
+	*payloads = (qske_payload_t**)malloc(sizeof(qske_payload_t*) * num_payloads);
+	int i;
+	for (i=0 ; i<num_payloads ; i++)
+	{
+		DBG1(DBG_ENC, "Creating QSKE mini payload %d", i);
+		private_qske_payload_t* payload = (private_qske_payload_t*)qske_payload_create(type);
+		payload->dh_group_number = i ? 0 : dh->get_dh_group(dh);
+		int payload_chunk_len = min(max_payload_chunk_size, remaining);
+		payload->key_exchange_data = chunk_alloc(payload_chunk_len);
+		memcpy(payload->key_exchange_data.ptr, value.ptr + offset, payload_chunk_len);
+		payload->payload_length += payload_chunk_len;
+		(*payloads)[i] = &payload->public;
+		offset += payload_chunk_len;
+		remaining -= payload_chunk_len;
+	}
+	chunk_free(&value);
+
+	return num_payloads;
 }

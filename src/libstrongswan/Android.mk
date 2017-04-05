@@ -117,9 +117,22 @@ LOCAL_SRC_FILES += $(call add_plugin, sha1)
 
 LOCAL_SRC_FILES += $(call add_plugin, sha2)
 
+LOCAL_SRC_FILES += $(call add_plugin, sha3)
+
 LOCAL_SRC_FILES += $(call add_plugin, x509)
 
 LOCAL_SRC_FILES += $(call add_plugin, xcbc)
+
+LOCAL_SRC_FILES += $(call add_plugin, chapoly)
+LOCAL_SRC_FILES += $(call add_plugin, mgf1)
+
+LOCAL_SRC_FILES += $(call add_plugin, newhope)
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/math/libnttfft
+LOCAL_SRC_FILES +=  math/libnttfft/ntt_fft_params.c
+LOCAL_SRC_FILES +=  math/libnttfft/ntt_fft.c
+#LOCAL_STATIC_LIBRARIES += libnttfft
+LOCAL_SRC_FILES += $(call add_plugin, ntru)
+LOCAL_SRC_FILES += $(call add_plugin, ntru_prime)
 
 # build libstrongswan ----------------------------------------------------------
 

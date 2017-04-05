@@ -536,6 +536,7 @@ static status_t select_and_install(private_child_create_t *this,
 						   this->proposals);
 		return FAILED;
 	}
+
 	this->other_spi = this->proposal->get_spi(this->proposal);
 
 	if (!this->initiator && !allocate_spi(this))
@@ -549,7 +550,7 @@ static status_t select_and_install(private_child_create_t *this,
 	{
 		uint16_t group;
 
-		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
+		if (this->proposal->get_algorithm_dh(this->proposal, true, false,
 										  &group, NULL))
 		{
 			DBG1(DBG_IKE, "DH group %N inacceptable, requesting %N",
@@ -566,24 +567,34 @@ static status_t select_and_install(private_child_create_t *this,
 	}
 
 #ifdef QSKE
-	if (!this->proposal->has_qs_dh_group(this->proposal, this->qs_dh_group))
+	if (this->qs_dh_group != MODP_NONE)
 	{
-		uint16_t group;
-
-		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
-										  &group, NULL))
+		if (!this->proposal->has_qs_dh_group(this->proposal, this->qs_dh_group))
 		{
-			DBG1(DBG_IKE, "QS DH group %N inacceptable, requesting %N",
-				 diffie_hellman_group_names, this->qs_dh_group,
-				 diffie_hellman_group_names, group);
-			this->qs_dh_group = group;
-			return INVALID_ARG;
+			uint16_t group;
+
+			if (this->proposal->get_algorithm_dh(this->proposal, false, true,
+											&group, NULL))
+			{
+				DBG1(DBG_IKE, "QS DH group %N inacceptable, requesting %N",
+					diffie_hellman_group_names, this->qs_dh_group,
+					diffie_hellman_group_names, group);
+				this->qs_dh_group = group;
+				return INVALID_ARG;
+			}
+			/* the selected proposal does not use a QS DH group */
+			if (this->dh)
+			{
+				DBG1(DBG_IKE, "ignoring QSKE exchange, agreed on a KE PFS proposal");
+			}
+			else
+			{
+				DBG1(DBG_IKE, "ignoring QSKE exchange, agreed on a non-PFS proposal");
+			}
+			DESTROY_IF(this->qs_dh);
+			this->qs_dh = NULL;
+			this->qs_dh_group = MODP_NONE;
 		}
-		/* the selected proposal does not use a QS DH group */
-		DBG1(DBG_IKE, "ignoring QS KE exchange, agreed on a non-PFS proposal");
-		DESTROY_IF(this->qs_dh);
-		this->qs_dh = NULL;
-		this->qs_dh_group = MODP_NONE;
 	}
 #endif
 
@@ -822,9 +833,6 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
 	sa_payload_t *sa_payload;
 	nonce_payload_t *nonce_payload;
 	ke_payload_t *ke_payload;
-#ifdef QSKE
-	qske_payload_t *qske_payload;
-#endif
 	ts_payload_t *ts_payload;
 	kernel_feature_t features;
 
@@ -864,14 +872,19 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
 	/* quantum-safe diffie hellman exchange, if PFS enabled */
 	if (this->qs_dh)
 	{
-		qske_payload = qske_payload_create_from_diffie_hellman(
-							PLV2_QSKEY_EXCHANGE, this->qs_dh);
-		if (!qske_payload)
+		qske_payload_t** payloads = NULL;
+		int num_payloads = qske_payload_create_from_diffie_hellman(
+							PLV2_QSKEY_EXCHANGE, this->qs_dh, &payloads);
+		if (!num_payloads)
 		{
 			DBG1(DBG_IKE, "creating QSKE payload failed");
 			return FALSE;
 		}
-		message->add_payload(message, (payload_t*)qske_payload);
+		int i;
+		for (i=0 ; i<num_payloads ; i++) {
+			message->add_payload(message, (payload_t*)payloads[i]);
+		}
+		free(payloads);
 	}
 #endif
 
@@ -1026,9 +1039,12 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 				{
 					this->qs_dh_group = qske_payload->get_dh_group_number(
 											qske_payload);
-					this->qs_dh = this->qs_keymat->keymat.create_dh(
-							  		&this->qs_keymat->keymat,
-									this->qs_dh_group);
+					if (this->qs_dh_group != MODP_NONE)
+					{
+						this->qs_dh = this->qs_keymat->keymat.create_dh(
+								  		&this->qs_keymat->keymat,
+										this->qs_dh_group);
+					}
 				}
 				if (this->qs_dh)
 				{

@@ -72,10 +72,18 @@ enum diffie_hellman_group_t {
 	NTRU_192_BIT = 1032,
 	NTRU_256_BIT = 1033,
 	NH_128_BIT   = 1040,
+	NTRU_PRIME_129_BIT = 1041,
 	/** internally used DH group with additional parameters g and p, outside
 	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */
 	MODP_CUSTOM = 65536,
 };
+
+#define DH_IS_QUANTUM_SAFE(dh) ((dh==NTRU_112_BIT) || \
+							 	(dh==NTRU_128_BIT) || \
+								(dh==NTRU_192_BIT) || \
+								(dh==NTRU_256_BIT) || \
+								(dh==NH_128_BIT)  || \
+								(dh==NTRU_PRIME_129_BIT))
 
 /**
  * enum name for diffie_hellman_group_t.

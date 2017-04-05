@@ -212,6 +212,7 @@ static void conn_defaults(starter_conn_t *conn)
 	conn->options = SA_OPTION_MOBIKE;
 
 	conn->ike                   = strdupnull(ike_defaults);
+
 	/* esp defaults are set after parsing the conn section */
 	conn->sa_ike_life_seconds   = IKE_LIFETIME_DEFAULT;
 	conn->sa_ipsec_life_seconds = IPSEC_LIFETIME_DEFAULT;

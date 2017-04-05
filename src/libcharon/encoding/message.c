@@ -37,6 +37,9 @@
 #include <encoding/payloads/unknown_payload.h>
 #include <encoding/payloads/cp_payload.h>
 #include <encoding/payloads/fragment_payload.h>
+#ifdef QSKE
+#include <encoding/payloads/qske_payload.h>
+#endif
 
 /**
  * Max number of notify payloads per IKEv2 message
@@ -67,6 +70,14 @@
  * Max number of NAT-D payloads per IKEv1 message
  */
 #define MAX_NAT_D_PAYLOADS 10
+
+#ifdef QSKE
+/**
+ * Max number of QSKE payloads per IKEv2 message. QS key exchange data can be large
+ * and must be split across multiple payloads.
+ */
+#define MAX_QSKE_PAYLOADS	1024
+#endif
 
 /**
  * A payload rule defines the rules for a payload
@@ -126,7 +137,7 @@ static payload_rule_t ike_sa_init_i_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
 #ifdef QSKE
-    {PLV2_QSKEY_EXCHANGE,           1,  1,                      FALSE,  FALSE},
+    {PLV2_QSKEY_EXCHANGE,           0,  MAX_QSKE_PAYLOADS,      FALSE,  FALSE},
 #endif
 	{PLV2_SECURITY_ASSOCIATION,		1,	1,						FALSE,	FALSE},
 	{PLV2_KEY_EXCHANGE,				1,	1,						FALSE,	FALSE},
@@ -161,7 +172,7 @@ static payload_rule_t ike_sa_init_r_rules[] = {
 	{PLV2_SECURITY_ASSOCIATION,		1,	1,						FALSE,	FALSE},
 	{PLV2_KEY_EXCHANGE,				1,	1,						FALSE,	FALSE},
 #ifdef QSKE
-    {PLV2_QSKEY_EXCHANGE,           1,  1,                      FALSE,  FALSE},
+    {PLV2_QSKEY_EXCHANGE,           0,  MAX_QSKE_PAYLOADS,		FALSE,  FALSE},
 #endif
 	{PLV2_NONCE,					1,	1,						FALSE,	FALSE},
 	{PLV2_CERTREQ,					0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
@@ -353,7 +364,7 @@ static payload_rule_t create_child_sa_i_rules[] = {
 	{PLV2_NONCE,					1,	1,						TRUE,	FALSE},
 	{PLV2_KEY_EXCHANGE,				0,	1,						TRUE,	FALSE},
 #ifdef QSKE
-    {PLV2_QSKEY_EXCHANGE,           0,  1,                      TRUE,   FALSE},
+    {PLV2_QSKEY_EXCHANGE,           0,  MAX_QSKE_PAYLOADS,      TRUE,   FALSE},
 #endif
 	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
 	{PLV2_TS_RESPONDER,				0,	1,						TRUE,	FALSE},
@@ -394,7 +405,7 @@ static payload_rule_t create_child_sa_r_rules[] = {
 	{PLV2_NONCE,					1,	1,						TRUE,	FALSE},
 	{PLV2_KEY_EXCHANGE,				0,	1,						TRUE,	FALSE},
 #ifdef QSKE
-    {PLV2_QSKEY_EXCHANGE,           0,  1,                      TRUE,   FALSE},
+    {PLV2_QSKEY_EXCHANGE,           0,  MAX_QSKE_PAYLOADS,      TRUE,   FALSE},
 #endif
 	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
 	{PLV2_TS_RESPONDER,				0,	1,						TRUE,	FALSE},
@@ -2288,6 +2299,10 @@ static status_t parse_payloads(private_message_t *this)
 		return SUCCESS;
 	}
 
+#ifdef QSKE
+	qske_payload_t* qske_payload = NULL;
+#endif
+
 	while (type != PL_NONE)
 	{
 		DBG2(DBG_ENC, "starting parsing a %N payload",
@@ -2320,6 +2335,25 @@ static status_t parse_payloads(private_message_t *this)
 			DBG2(DBG_ENC, "%N payload verified, adding to payload list",
 				 payload_type_names, type);
 		}
+
+#ifdef QSKE
+		if (type == PLV2_QSKEY_EXCHANGE) 
+		{
+			if (!qske_payload)
+			{
+				qske_payload = (qske_payload_t*)payload;
+			}
+			else
+			{
+				DBG1(DBG_ENC, "Appending secondary QSKE payload chunk to primary QSKE payload!");
+				qske_payload->append_secondary_qske_payload(qske_payload, (qske_payload_t*)payload);
+				type = payload->get_next_type(payload);
+				payload->destroy(payload);
+				continue;
+			}
+		}
+#endif
+
 		this->payloads->insert_last(this->payloads, payload);
 
 		/* an encrypted (fragment) payload MUST be the last one, so STOP here.

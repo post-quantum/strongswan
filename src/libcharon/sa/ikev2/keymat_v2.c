@@ -326,15 +326,15 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		{
 			return FALSE;
 		}
-		DBG4(DBG_IKE, "shared DH secret : %B", &dh_secret);
 		if (qs_dh)
 		{
+			DBG4(DBG_IKE, "shared DH secret : %B", &dh_secret);
 			/* We also have a quantum-safe shared secret */
 			if (!qs_dh->get_shared_secret(qs_dh, &qs_dh_secret))
 			{
 				return FALSE;
 			}
-			DBG4(DBG_IKE, "shared QS secret : %B", &qs_dh_secret);
+			DBG4(DBG_IKE, "Shared QS secret : %B", &qs_dh_secret);
 			secret = chunk_cat("ss", dh_secret, qs_dh_secret);
 			DBG4(DBG_IKE, "shared DH | QS secret : %B", &secret);
 		}
@@ -628,9 +628,9 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		{
 			return FALSE;
 		}
-		DBG4(DBG_CHD, "shared DH secret : %B", &dh_secret);
 		if (qs_dh)
 		{
+			DBG4(DBG_CHD, "shared DH secret : %B", &dh_secret);
 			/* We also have a quantum-safe shared secret */
 			if (!qs_dh->get_shared_secret(qs_dh, &qs_dh_secret))
 			{

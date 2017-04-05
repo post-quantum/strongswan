@@ -1,0 +1,38 @@
+CFLAGS="$CFLAGS -O0 -ggdb -Wall -Wno-format -Wno-pointer-sign -Wno-deprecated-declarations" ./configure \
+--enable-shared \
+--disable-gmp \
+--enable-openssl \
+--disable-kernel-libipsec \
+--disable-kernel-netlink \
+--enable-kernel-pfroute \
+--enable-kernel-pfkey \
+--disable-scripts \
+--enable-pkcs1 \
+--enable-socket-default \
+--enable-osx-attr \
+--enable-xauth-generic \
+--enable-gcm \
+--enable-ccm \
+--enable-ctr \
+--enable-keychain \
+--enable-random \
+--enable-nonce \
+--enable-charon \
+--disable-ikev1 \
+--enable-ikev2 \
+--enable-ntru \
+--enable-newhope \
+--enable-sha1 \
+--enable-sha2 \
+--enable-sha3 \
+--enable-md5 \
+--enable-aes \
+--enable-hmac \
+--enable-x509 \
+--enable-chapoly \
+--enable-hybrid-quantum-safe \
+
+#--enable-monolithic \
+#--enable-static \
+#--disable-defaults \
+

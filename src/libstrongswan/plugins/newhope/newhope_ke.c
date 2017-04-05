@@ -352,11 +352,11 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 		/* compute b = a * NTT(s) + NTT(e) */
 		b = multiply_add_poly(this, a, e);
 
-		DBG3(DBG_LIB, "   i  a[i]  b[i]");
+		/*DBG3(DBG_LIB, "   i  a[i]  b[i]");
 		for (i = 0; i < n; i++)
 		{
 			DBG3(DBG_LIB, "%4d %5u %5u", i, a[i], b[i]);
-		}
+		}*/
 
 		/* pack coefficients of polynomial b */
 		pack_poly(this, value->ptr, b);
@@ -453,11 +453,11 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 		}
 
 		/* debug output of polynomials a and b */
-		DBG3(DBG_LIB, "   i  a[i]  b[i]");
+		/*DBG3(DBG_LIB, "   i  a[i]  b[i]");
 		for (i = 0; i < n; i++)
 		{
 			DBG3(DBG_LIB, "%4d %5u %5u", i, a[i], b[i]);
-		}
+		}*/
 
 		/* generate random seed for the derivation of noise polynomials */
 		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);

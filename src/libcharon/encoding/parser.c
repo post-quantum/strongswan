@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "parser.h"
 
@@ -475,6 +476,14 @@ METHOD(parser_t, parse_payload, status_t,
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
+#if defined(QSKE) && defined(PQPERF)
+				if (payload_type == PLV2_KEY_EXCHANGE) {
+					printf("PQPERF: parsed ke payload length is %" PRIu16 "\n", payload_length);
+				}
+				else if (payload_type == PLV2_QSKEY_EXCHANGE) {
+					printf("PQPERF: parsed qske payload length is %" PRIu16 "\n", payload_length);
+				}
+#endif
 				break;
 			}
 			case SPI_SIZE:

@@ -621,6 +621,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_NTRUPRIME
+  SUBDIRS += plugins/ntru_prime
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/ntru_prime/libstrongswan-ntru_prime.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC

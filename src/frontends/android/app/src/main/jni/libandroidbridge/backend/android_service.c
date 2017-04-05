@@ -744,8 +744,27 @@ static job_requeue_t initiate(private_android_service_t *this)
 	ike_cfg = ike_cfg_create(IKEV2, TRUE, TRUE, "0.0.0.0",
 							 charon->socket->get_port(charon->socket, FALSE),
 							 server, port, FRAGMENTATION_YES, 0);
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
+
+    /*
+    CJ's desired config:
+    ike=aes256-sha256-modp3072-newhope128,aes256-sha256-modp3072-ntru128,aes256-sha256-modp3072-ntruprime129,aes256-sha256-ecp256-newhope128,aes256-sha256-ecp256-ntru128,aes256-sha256-ecp256-ntruprime129!
+    */
+	//ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	//ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
+	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
+		"aes256-sha256-modp3072-newhope128"));
+	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
+        "aes256-sha256-modp3072-ntru128"));
+	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
+		"aes256-sha256-modp3072-ntruprime129"));
+	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
+        "aes256-sha256-ecp256-newhope128"));
+	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
+		"aes256-sha256-ecp256-ntru128"));
+	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
+        "aes256-sha256-ecp256-ntruprime129"));
+
+
 
 	peer_cfg = peer_cfg_create("android", ike_cfg, &peer);
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
@@ -792,27 +811,35 @@ static job_requeue_t initiate(private_android_service_t *this)
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create("android", &child);
+
+    // CJ's desired config:
+    //  esp=aes256-sha256-modp3072-newhope128,aes256-sha256-ecp256-newhope128!
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes256-sha256-modp3072-newhope128"));
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes256-sha256-ecp256-newhope128"));
+
 	/* create ESP proposals with and without DH groups, let responder decide
 	 * if PFS is used */
+	/*child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes128gcm16-aes256gcm16-ecp256"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes128gcm16-aes256gcm16-chacha20poly1305-"
-							"curve25519-ecp256-modp3072"));
-	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes128-sha256-curve25519-ecp256-modp3072"));
+							"aes128-sha256-ecp256-modp3072"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes256-sha384-ecp521-modp8192"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-aes192-aes256-sha1-sha256-sha384-sha512-"
-							"curve25519-ecp256-ecp384-ecp521-"
+							"ecp256-ecp384-ecp521-"
 							"modp2048-modp3072-modp4096-modp1024"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes128gcm16-aes256gcm16-chacha20poly1305"));
+							"aes128gcm16-aes256gcm16"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-sha256"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes256-sha384"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-aes192-aes256-sha1-sha256-sha384-sha512"));
+							*/
 	ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
