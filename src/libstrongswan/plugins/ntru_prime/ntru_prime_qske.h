@@ -18,10 +18,12 @@
  * @{ @ingroup ntru_prime_p
  */
 
-#ifndef NTRU_PRIME_KE_H_
-#define NTRU_PRIME_KE_H_
+#ifndef NTRU_PRIME_QSKE_H_
+#define NTRU_PRIME_QSKE_H_
 
-typedef struct ntru_prime_ke_t ntru_prime_ke_t;
+#ifdef QSKE
+
+typedef struct ntru_prime_qske_t ntru_prime_qske_t;
 
 #include <library.h>
 
@@ -29,22 +31,25 @@ typedef struct ntru_prime_ke_t ntru_prime_ke_t;
  * Implementation of a key exchange algorithm using
  * streamlined NTRU prime encryption
  */
-struct ntru_prime_ke_t {
+struct ntru_prime_qske_t {
 
 	/**
-	 * Implements diffie_hellman_t interface.
+	 * Implements QSKE interface.
 	 */
-	diffie_hellman_t dh;
+	quantum_safe_t qs;
+
 };
 
 /**
  * Creates a new ntru_prime_ke_t object.
  *
- * @param group			NTRU prime group number to use
+ * @param group			QS NTRU prime group number to use
  * @param g				not used
  * @param p				not used
- * @return				ntru_prime_ke_t object, NULL if not supported
+ * @return				ntru_prime_qske_t object, NULL if not supported
  */
-ntru_prime_ke_t* ntru_prime_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p);
+ntru_prime_qske_t* ntru_prime_qske_create(quantum_safe_group_t group, chunk_t g, chunk_t p);
+
+#endif
 
 #endif /** NTRU_PRIME_KE_H_ @}*/

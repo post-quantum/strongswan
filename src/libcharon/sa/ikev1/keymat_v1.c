@@ -932,6 +932,9 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 			.keymat = {
 				.get_version = _get_version,
 				.create_dh = _create_dh,
+#ifdef QSKE
+				.create_qs = NULL,
+#endif
 				.create_nonce_gen = _create_nonce_gen,
 				.get_aead = _get_aead,
 				.destroy = _destroy,

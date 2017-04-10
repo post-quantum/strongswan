@@ -60,9 +60,9 @@ struct private_qske_payload_t {
 	uint16_t payload_length;
 
 	/**
-	 * DH Group Number.
+	 * QS Group Number.
 	 */
-	uint16_t dh_group_number;
+	quantum_safe_group_t qs_group_number;
 
 	/**
 	 * Key Exchange Data of this QSKE payload.
@@ -93,8 +93,8 @@ static encoding_rule_t encodings_v2[] = {
 	{ RESERVED_BIT,		offsetof(private_qske_payload_t, reserved_bit[6])	},
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_qske_payload_t, payload_length)	},
-	/* DH Group number as 16 bit field*/
-	{ U_INT_16,			offsetof(private_qske_payload_t, dh_group_number)	},
+	/* QS Group number as 16 bit field*/
+	{ U_INT_16,			offsetof(private_qske_payload_t, qs_group_number)	},
 	/* 2 reserved bytes */
 	{ RESERVED_BYTE,	offsetof(private_qske_payload_t, reserved_byte[0])},
 	{ RESERVED_BYTE,	offsetof(private_qske_payload_t, reserved_byte[1])},
@@ -198,10 +198,10 @@ METHOD(qske_payload_t, get_key_exchange_data, chunk_t,
 	return this->key_exchange_data;
 }
 
-METHOD(qske_payload_t, get_dh_group_number, diffie_hellman_group_t,
+METHOD(qske_payload_t, get_qs_group_number, quantum_safe_group_t,
 	private_qske_payload_t *this)
 {
-	return this->dh_group_number;
+	return this->qs_group_number;
 }
 
 METHOD(qske_payload_t, append_secondary_qske_payload, void,
@@ -239,12 +239,12 @@ qske_payload_t *qske_payload_create(payload_type_t type)
 				.destroy = _destroy,
 			},
 			.get_key_exchange_data = _get_key_exchange_data,
-			.get_dh_group_number = _get_dh_group_number,
+			.get_qs_group_number = _get_qs_group_number,
 			.append_secondary_qske_payload = _append_secondary_qske_payload,
 			.destroy = _destroy,
 		},
 		.next_payload = PL_NONE,
-		.dh_group_number = MODP_NONE,
+		.qs_group_number = QS_NONE,
 		.type = type,
 	);
 	this->payload_length = get_header_length(this);
@@ -254,14 +254,14 @@ qske_payload_t *qske_payload_create(payload_type_t type)
 /*
  * Described in header
  */
-int qske_payload_create_from_diffie_hellman(payload_type_t type,
-								  						diffie_hellman_t *dh, 
-														  qske_payload_t ***payloads)
+int qske_payload_create_from_qs(payload_type_t type,
+								quantum_safe_t *qs, 
+								qske_payload_t ***payloads)
 {
 	chunk_t value;
 
 	*payloads = NULL;
-	if (!dh->get_my_public_value(dh, &value))
+	if (!qs->get_my_public_value(qs, &value))
 	{
 		return 0;
 	}
@@ -289,7 +289,7 @@ int qske_payload_create_from_diffie_hellman(payload_type_t type,
 	{
 		DBG1(DBG_ENC, "Creating QSKE mini payload %d", i);
 		private_qske_payload_t* payload = (private_qske_payload_t*)qske_payload_create(type);
-		payload->dh_group_number = i ? 0 : dh->get_dh_group(dh);
+		payload->qs_group_number = i ? 0 : qs->get_qs_group(qs);
 		int payload_chunk_len = min(max_payload_chunk_size, remaining);
 		payload->key_exchange_data = chunk_alloc(payload_chunk_len);
 		memcpy(payload->key_exchange_data.ptr, value.ptr + offset, payload_chunk_len);

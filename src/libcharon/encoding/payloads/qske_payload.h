@@ -49,13 +49,11 @@ struct qske_payload_t {
 	chunk_t (*get_key_exchange_data) (qske_payload_t *this);
 
 	/**
-	 * Gets the Diffie-Hellman Group Number of this KE payload (IKEv2 only).
-	 * @note This is a workaround, obviously in quantum-safe context,
-	 * Diffie-Hellman should not be used anymore.
+	 * Gets the Quantum Safe Group Number of this KE payload (IKEv2 only).
 	 *
-	 * @return 					DH Group Number of this payload
+	 * @return 					QS Group Number of this payload
 	 */
-	diffie_hellman_group_t (*get_dh_group_number) (qske_payload_t *this);
+	quantum_safe_group_t (*get_qs_group_number) (qske_payload_t *this);
 
 	/**
 	 * Appends the key exchange data from the secondary payload to this one
@@ -81,12 +79,11 @@ qske_payload_t *qske_payload_create(payload_type_t type);
  * (large qs key_exchange_data means we need multiple payloads)
  *
  * @param type		PLV2_KEY_EXCHANGE or PLV1_KEY_EXCHANGE
- * @param dh		diffie hellman object containing group and key
+ * @param dh		quantum safe exchange object containing group and key
  * @param payloads	points to returned array of qske_payload_t*
  * @return 			number of payloads in the array, 0 on error
  */
-int qske_payload_create_from_diffie_hellman(payload_type_t type,
-								  						diffie_hellman_t *dh, 
-														  qske_payload_t ***payloads);
+int qske_payload_create_from_qs(payload_type_t type, quantum_safe_t *qs, 
+									qske_payload_t ***payloads);
 
 #endif /** QSKE_PAYLOAD_H_ @}*/

@@ -1,5 +1,7 @@
 CFLAGS="$CFLAGS -O0 -ggdb -Wall -Wno-format -Wno-pointer-sign -Wno-deprecated-declarations" ./configure \
 --enable-shared \
+--enable-ha \
+--enable-md5 \
 --disable-gmp \
 --enable-openssl \
 --disable-kernel-libipsec \
@@ -21,6 +23,7 @@ CFLAGS="$CFLAGS -O0 -ggdb -Wall -Wno-format -Wno-pointer-sign -Wno-deprecated-de
 --disable-ikev1 \
 --enable-ikev2 \
 --enable-ntru \
+--enable-ntruprime \
 --enable-newhope \
 --enable-sha1 \
 --enable-sha2 \

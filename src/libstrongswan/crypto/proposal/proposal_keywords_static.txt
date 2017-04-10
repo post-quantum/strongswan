@@ -171,5 +171,13 @@ ntru192,          DIFFIE_HELLMAN_GROUP, NTRU_192_BIT,              0
 ntru256,          DIFFIE_HELLMAN_GROUP, NTRU_256_BIT,              0
 newhope128,       DIFFIE_HELLMAN_GROUP, NH_128_BIT,                0
 ntruprime129,     DIFFIE_HELLMAN_GROUP, NTRU_PRIME_129_BIT,        0
+#ifdef QSKE
+qs_ntru112,       QUANTUM_SAFE_GROUP, QS_NTRU_112_BIT,             0
+qs_ntru128,       QUANTUM_SAFE_GROUP, QS_NTRU_128_BIT,             0
+qs_ntru192,       QUANTUM_SAFE_GROUP, QS_NTRU_192_BIT,             0
+qs_ntru256,       QUANTUM_SAFE_GROUP, QS_NTRU_256_BIT,             0
+qs_newhope128,    QUANTUM_SAFE_GROUP, QS_NH_128_BIT,               0
+qs_ntruprime129,  QUANTUM_SAFE_GROUP, QS_NTRU_PRIME_129_BIT,       0
+#endif
 noesn,            EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,   0
 esn,              EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS,      0

@@ -11,7 +11,9 @@ AM_CFLAGS = \
 noinst_LTLIBRARIES = libnewhope.la
 libnewhope_la_SOURCES = \
 	newhope_ke.h newhope_ke.c \
+	newhope_qske.h newhope_qske.c \
 	newhope_noise.h newhope_noise.c \
+	newhope_poly.h newhope_poly.c \
 	newhope_reconciliation.h newhope_reconciliation.c
 
 libnewhope_la_LIBADD = \

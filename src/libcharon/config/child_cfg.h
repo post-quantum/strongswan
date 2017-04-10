@@ -204,11 +204,11 @@ struct child_cfg_t {
 
 #ifdef QSKE
 	/**
-	 * Get the QS DH group to use for CHILD_SA setup.
+	 * Get the QS group to use for CHILD_SA setup.
 	 *
-	 * @return				dh group to use
+	 * @return				qs group to use
 	 */
-	diffie_hellman_group_t (*get_qs_dh_group)(child_cfg_t *this);
+	quantum_safe_group_t (*get_qs_group)(child_cfg_t *this);
 #endif
 
 	/**

@@ -12,31 +12,32 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+#ifdef QSKE
 
 #include "ntru_prime.h"
-#include "ntru_prime_ke.h"
+#include "ntru_prime_qske.h"
 #include "ntru_prime_pq_random.h"
 
-#include <crypto/diffie_hellman.h>
+#include <crypto/quantum_safe.h>
 #include <utils/debug.h>
 
-#define METHOD_KE(name, ret, ...) METHOD(diffie_hellman_t, name, ret, private_ntru_prime_ke_t *this, ##__VA_ARGS__)
+#define METHOD_KE(name, ret, ...) METHOD(quantum_safe_t, name, ret, private_ntru_prime_qske_t *this, ##__VA_ARGS__)
 
-typedef struct private_ntru_prime_ke_t private_ntru_prime_ke_t;
+typedef struct private_ntru_prime_qske_t private_ntru_prime_qske_t;
 
  /**
  * Private data of an ntru_prime_ke_t object.
  */
-struct private_ntru_prime_ke_t {
+struct private_ntru_prime_qske_t {
 	/**
-	 * Public ntru_prime_ke_t interface.
+	 * Public ntru_prime_qske_t interface.
 	 */
-	ntru_prime_ke_t public;
+	ntru_prime_qske_t public;
 
 	/**
-	 * Diffie Hellman group number.
+	 * QSKE group number.
 	 */
-	diffie_hellman_group_t group_dh;
+	quantum_safe_group_t group_qs;
 
 	/**
 	 * Cryptographical strength in bits of the NTRU Prime Parameter Set
@@ -207,10 +208,9 @@ METHOD_KE(set_other_public_value, bool, chunk_t value)
 	return this->computed;
 }
 
-METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
-	private_ntru_prime_ke_t *this)
+METHOD_KE(get_qs_group, quantum_safe_group_t)
 {
-	return this->group_dh;
+	return this->group_qs;
 }
 
 METHOD_KE(destroy, void )
@@ -225,24 +225,23 @@ METHOD_KE(destroy, void )
 /*
  * Described in header.
  */
-ntru_prime_ke_t* ntru_prime_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
-{
-	private_ntru_prime_ke_t *this;
+ntru_prime_qske_t* ntru_prime_qske_create(quantum_safe_group_t group, chunk_t g, chunk_t p) {
+	private_ntru_prime_qske_t *this;
     const int strength = 129;
 
 	DBG1(DBG_LIB, "%u-bit NTRU prime", strength);
 
 	INIT(this,
 		.public = {
-			.dh = {
+			.qs = {
+				.get_qs_group = _get_qs_group,
 				.get_shared_secret = _get_shared_secret,
 				.set_other_public_value = _set_other_public_value,
 				.get_my_public_value = _get_my_public_value,
-				.get_dh_group = _get_dh_group,
 				.destroy = _destroy,
 			},
 		},
-		.group_dh = group,
+		.group_qs = group,
 		.strength = strength,
 		.pubkey = chunk_empty,
 		.privkey = chunk_empty,
@@ -254,3 +253,6 @@ ntru_prime_ke_t* ntru_prime_ke_create(diffie_hellman_group_t group, chunk_t g, c
 
 	return &this->public;
 }
+
+
+#endif

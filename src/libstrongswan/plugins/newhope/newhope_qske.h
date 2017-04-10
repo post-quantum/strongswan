@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2017 CJ Tjhai
- * Post-Quantum
+ * Copyright (C) 2016 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -14,37 +14,41 @@
  */
 
 /**
- * @defgroup ntru_prime_ke ntru_prime_ke
- * @{ @ingroup ntru_prime_p
+ * @defgroup newhope_qske newhope_qske
+ * @{ @ingroup newhope_p
  */
 
-#ifndef NTRU_PRIME_KE_H_
-#define NTRU_PRIME_KE_H_
+#ifndef NEWHOPE_QSKE_H_
+#define NEWHOPE_QSKE_H_
 
-typedef struct ntru_prime_ke_t ntru_prime_ke_t;
+#ifdef QSKE
+
+typedef struct newhope_qske_t newhope_qske_t;
 
 #include <library.h>
 
 /**
- * Implementation of a key exchange algorithm using
- * streamlined NTRU prime encryption
+ * Implementation of a key exchange algorithm using the New Hope algorithm
  */
-struct ntru_prime_ke_t {
+struct newhope_qske_t {
 
 	/**
-	 * Implements diffie_hellman_t interface.
+	 * Implementation of the QSKE interface.
 	 */
-	diffie_hellman_t dh;
+	quantum_safe_t qs;
 };
 
 /**
- * Creates a new ntru_prime_ke_t object.
+ * Creates a new newhope_qske_t object.
  *
- * @param group			NTRU prime group number to use
+ * @param group			not used
  * @param g				not used
  * @param p				not used
- * @return				ntru_prime_ke_t object, NULL if not supported
+ * @return				newhope_qske_t object, NULL if not supported
  */
-ntru_prime_ke_t* ntru_prime_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p);
+newhope_qske_t *newhope_qske_create(quantum_safe_group_t group, chunk_t g, chunk_t p);
 
-#endif /** NTRU_PRIME_KE_H_ @}*/
+#endif
+
+#endif /** NEWHOPE_QSKE_H_ @}*/
+

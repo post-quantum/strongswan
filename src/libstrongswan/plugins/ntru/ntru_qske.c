@@ -13,23 +13,21 @@
  * for more details.
  */
 
-#include "ntru_ke.h"
+#ifdef QSKE
+
+#include "ntru_qske.h"
 #include "ntru_drbg.h"
 #include "ntru_param_set.h"
 #include "ntru_private_key.h"
 #include "ntru_public_key.h"
 
-#include <crypto/diffie_hellman.h>
+#include <crypto/quantum_safe.h>
 #include <utils/debug.h>
 
-#ifdef QSKE
-#define METHOD_KE(name, ret, ...) METHOD2(diffie_hellman_t, quantum_safe_t, name, ret, private_ntru_ke_t *this, ##__VA_ARGS__)
-#else
-#define METHOD_KE(name, ret, ...) METHOD(diffie_hellman_t, name, ret, private_ntru_ke_t *this, ##__VA_ARGS__)
-#endif
+#define METHOD_KE(name, ret, ...) METHOD(quantum_safe_t, name, ret, private_ntru_qske_t *this, ##__VA_ARGS__)
 
 
-typedef struct private_ntru_ke_t private_ntru_ke_t;
+typedef struct private_ntru_qske_t private_ntru_qske_t;
 
 /* Best bandwidth and speed, no X9.98 compatibility */
 static const ntru_param_set_id_t param_sets_optimum[] = {
@@ -52,18 +50,18 @@ static const ntru_param_set_id_t param_sets_x9_98_balance[] = {
 };
 
 /**
- * Private data of an ntru_ke_t object.
+ * Private data of an ntru_qske_t object.
  */
-struct private_ntru_ke_t {
+struct private_ntru_qske_t {
 	/**
-	 * Public ntru_ke_t interface.
+	 * Public ntru_qske_t interface.
 	 */
-	ntru_ke_t public;
+	ntru_qske_t public;
 
 	/**
-	 * Diffie Hellman group number.
+	 * QSKE group number.
 	 */
-	diffie_hellman_group_t group_dh;
+	quantum_safe_group_t group_qs;
 
 	/**
 	 * NTRU Parameter Set
@@ -223,10 +221,9 @@ METHOD_KE(set_other_public_value, bool, chunk_t value)
 	return this->computed;
 }
 
-METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
-	private_ntru_ke_t *this)
+METHOD_KE(get_qs_group, quantum_safe_group_t)
 {
-	return this->group_dh;
+	return this->group_qs;
 }
 
 METHOD_KE(destroy, void)
@@ -243,9 +240,9 @@ METHOD_KE(destroy, void)
 /*
  * Described in header.
  */
-ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
+ntru_qske_t *ntru_qske_create(quantum_safe_group_t group, chunk_t g, chunk_t p)
 {
-	private_ntru_ke_t *this;
+	private_ntru_qske_t *this;
 	const ntru_param_set_id_t *param_sets;
 	ntru_param_set_id_t param_set_id;
 	rng_t *entropy;
@@ -275,19 +272,19 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 
 	switch (group)
 	{
-		case NTRU_112_BIT:
+		case QS_NTRU_112_BIT:
 			strength = 112;
 			param_set_id = param_sets[0];
 			break;
-		case NTRU_128_BIT:
+		case QS_NTRU_128_BIT:
 			strength = 128;
 			param_set_id = param_sets[1];
 			break;
-		case NTRU_192_BIT:
+		case QS_NTRU_192_BIT:
 			strength = 192;
 			param_set_id = param_sets[2];
 			break;
-		case NTRU_256_BIT:
+		case QS_NTRU_256_BIT:
 			strength = 256;
 			param_set_id = param_sets[3];
 			break;
@@ -314,15 +311,15 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 
 	INIT(this,
 		.public = {
-			.dh = {
+			.qs = {
+				.get_qs_group = _get_qs_group,
 				.get_shared_secret = _get_shared_secret,
 				.set_other_public_value = _set_other_public_value,
 				.get_my_public_value = _get_my_public_value,
-				.get_dh_group = _get_dh_group,
 				.destroy = _destroy,
 			},
 		},
-		.group_dh = group,
+		.group_qs = group,
 		.param_set = ntru_param_set_get_by_id(param_set_id),
 		.strength = strength,
 		.entropy = entropy,
@@ -332,3 +329,4 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 	return &this->public;
 }
 
+#endif

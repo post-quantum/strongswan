@@ -86,21 +86,19 @@ struct private_ike_init_t {
 
 #ifdef QSKE
 	/**
-	 * diffie hellman group to use
-	 * Quantum-safe workaround
+	 * Quantum-safe group
 	 */
-	diffie_hellman_group_t qs_dh_group;
+	quantum_safe_group_t qs_group;
 
 	/**
-	 * diffie hellman key exchange
-	 * Quantum-safe workaround
+	 * Quantum safe key exchange interface
 	 */
-	diffie_hellman_t *qs_dh;
+	quantum_safe_t *qs;
 
 	/**
-	 * Applying DH public value failed?
+	 * Applying qs public value failed?
 	 */
-	bool qs_dh_failed;
+	bool qs_failed;
 
 	/**
 	 * Keymat derivation (from IKE_SA)
@@ -364,12 +362,12 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	}
 
 #ifdef QSKE
-	/* quantum-safe diffie hellman exchange, if PFS enabled */
-	if (this->qs_dh)
+	/* quantum-safe key exchange, if PFS enabled */
+	if (this->qs)
 	{
 		qske_payload_t** payloads = NULL;
-		int num_payloads = qske_payload_create_from_diffie_hellman(
-							PLV2_QSKEY_EXCHANGE, this->qs_dh, &payloads);
+		int num_payloads = qske_payload_create_from_qs(
+							PLV2_QSKEY_EXCHANGE, this->qs, &payloads);
 		if (!num_payloads)
 		{
 			DBG1(DBG_IKE, "creating QSKE payload failed");
@@ -488,7 +486,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			{
 				qske_payload = (qske_payload_t*)payload;
 
-				this->qs_dh_group = qske_payload->get_dh_group_number(
+				this->qs_group = qske_payload->get_qs_group_number(
 										qske_payload);
 				break;
 			}
@@ -573,29 +571,29 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 #ifdef QSKE
 
 		// If selected proposal has no QS DH component, we don't care about the QSKE payload
-		if (this->proposal->get_dh_group(this->proposal, true) == MODP_NONE)
+		if (this->proposal->get_qs_group(this->proposal) == QS_NONE)
 		{
-			this->qs_dh_group = MODP_NONE;
-            if (this->qs_dh)
+			this->qs_group = QS_NONE;
+            if (this->qs)
             {
-                this->qs_dh->destroy(this->qs_dh);
-                this->qs_dh = NULL;
+                this->qs->destroy(this->qs);
+                this->qs = NULL;
             }
 		}
-		if (this->qs_dh_group != MODP_NONE)
+		if (this->qs_group != QS_NONE)
 		{
 			if (qske_payload &&
-				this->proposal->has_qs_dh_group(this->proposal, this->qs_dh_group))
+				this->proposal->has_qs_group(this->proposal, this->qs_group))
 			{
 				if (!this->initiator)
 				{
-					this->qs_dh = this->qs_keymat->keymat.create_dh(
-										&this->qs_keymat->keymat, this->qs_dh_group);
+					this->qs = this->qs_keymat->keymat.create_qs(
+										&this->qs_keymat->keymat, this->qs_group);
 				}
-				if (this->qs_dh)
+				if (this->qs)
 				{
-					this->qs_dh_failed = !this->qs_dh->set_other_public_value(
-								this->qs_dh,
+					this->qs_failed = !this->qs->set_other_public_value(
+								this->qs,
 								qske_payload->get_key_exchange_data(qske_payload));
 				}
 			}
@@ -638,17 +636,17 @@ METHOD(task_t, build_i, status_t,
 	}
 
 #ifdef QSKE
-	if (!this->qs_dh)
+	if (!this->qs)
 	{
-		this->qs_dh_group = this->config->get_qs_dh_group(this->config);
-		if (this->qs_dh_group != MODP_NONE)
+		this->qs_group = this->config->get_qs_group(this->config);
+		if (this->qs_group != QS_NONE)
 		{
-			this->qs_dh = this->qs_keymat->keymat.create_dh(
-									&this->qs_keymat->keymat, this->qs_dh_group);
-			if (!this->qs_dh)
+			this->qs = this->qs_keymat->keymat.create_qs(
+									&this->qs_keymat->keymat, this->qs_group);
+			if (!this->qs)
 			{
-				DBG1(DBG_IKE, "configured QS DH group %N not supported",
-					diffie_hellman_group_names, this->qs_dh_group);
+				DBG1(DBG_IKE, "configured QS group %N not supported",
+					quantum_safe_group_names, this->qs_group);
 				return FAILED;
 			}
 		}
@@ -657,11 +655,11 @@ METHOD(task_t, build_i, status_t,
 
 	if (this->dh_group == MODP_NONE
 #ifdef QSKE
-	&& this->qs_dh_group == MODP_NONE
+		&& this->qs_group == QS_NONE
 #endif
 	)
 	{
-		DBG1(DBG_IKE, "no DH group specified!");
+		DBG1(DBG_IKE, "no key exchange algorithm specified!");
 		return FAILED;		
 	}
 
@@ -770,7 +768,7 @@ static bool derive_keys(private_ike_init_t *this,
 	}
 	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
 #ifdef QSKE
-                                       this->qs_dh,
+                                       this->qs,
 #endif
 									   nonce_i, nonce_r, id, prf_alg, skd))
 	{
@@ -823,7 +821,7 @@ METHOD(task_t, build_r, status_t,
 	{
 		uint16_t group;
 
-		if (this->proposal->get_algorithm_dh(this->proposal, true, false,
+		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
 										  &group, NULL))
 		{
 			DBG1(DBG_IKE, "DH group %N inacceptable, requesting %N",
@@ -850,20 +848,20 @@ METHOD(task_t, build_r, status_t,
 	}
 
 #ifdef QSKE
-	if (this->qs_dh_group != MODP_NONE)
+	if (this->qs_group != QS_NONE)
 	{
-		if (this->qs_dh == NULL ||
-			!this->proposal->has_qs_dh_group(this->proposal, this->qs_dh_group))
+		if (this->qs == NULL ||
+			!this->proposal->has_qs_group(this->proposal, this->qs_group))
 		{
 			uint16_t group;
 
-			if (this->proposal->get_algorithm_dh(this->proposal, false, true,
+			if (this->proposal->get_algorithm(this->proposal, QUANTUM_SAFE_GROUP,
 											&group, NULL))
 			{
-				DBG1(DBG_IKE, "QS DH group %N inacceptable, requesting %N",
-					diffie_hellman_group_names, this->qs_dh_group,
-					diffie_hellman_group_names, group);
-				this->qs_dh_group = group;
+				DBG1(DBG_IKE, "QS group %N inacceptable, requesting %N",
+					quantum_safe_group_names, this->qs_group,
+					quantum_safe_group_names, group);
+				this->qs_group = group;
 				group = htons(group);
 				message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
 									chunk_from_thing(group));
@@ -876,9 +874,9 @@ METHOD(task_t, build_r, status_t,
 			return FAILED;
 		}
 
-		if (this->qs_dh_failed)
+		if (this->qs_failed)
 		{
-			DBG1(DBG_IKE, "applying QS DH public value failed");
+			DBG1(DBG_IKE, "applying QS public value failed");
 			message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 			return FAILED;
 		}
@@ -1087,18 +1085,18 @@ METHOD(task_t, process_i, status_t,
 	}
 
 #ifdef QSKE
-	if (this->qs_dh_group != MODP_NONE)
+	if (this->qs_group != QS_NONE)
 	{
-		if (this->qs_dh == NULL ||
-			!this->proposal->has_qs_dh_group(this->proposal, this->qs_dh_group))
+		if (this->qs == NULL ||
+			!this->proposal->has_qs_group(this->proposal, this->qs_group))
 		{
-			DBG1(DBG_IKE, "peer QS DH group selection invalid");
+			DBG1(DBG_IKE, "peer QS group selection invalid");
 			return FAILED;
 		}
 
-		if (this->qs_dh_failed)
+		if (this->qs_failed)
 		{
-			DBG1(DBG_IKE, "applying QS DH public value failed");
+			DBG1(DBG_IKE, "applying QS public value failed");
 			return FAILED;
 		}
 	}
@@ -1138,14 +1136,14 @@ METHOD(task_t, migrate, void,
 												  this->dh_group);
 	}
 #ifdef QSKE
-	this->qs_dh_failed = FALSE;
-	if (this->qs_dh &&
-		this->qs_dh->get_dh_group(this->qs_dh) != this->qs_dh_group)
-	{       /* reset DH value only if group changed (INVALID_KE_PAYLOAD) */
-		this->qs_dh->destroy(this->qs_dh);
-		this->qs_dh = this->qs_keymat->keymat.create_dh(
+	this->qs_failed = FALSE;
+	if (this->qs &&
+		this->qs->get_qs_group(this->qs) != this->qs_group)
+	{       /* reset QS value only if group changed (INVALID_KE_PAYLOAD) */
+		this->qs->destroy(this->qs);
+		this->qs = this->qs_keymat->keymat.create_qs(
 												&this->qs_keymat->keymat,
-												this->qs_dh_group);
+												this->qs_group);
 	}
 #endif
 }
@@ -1155,7 +1153,7 @@ METHOD(task_t, destroy, void,
 {
 	DESTROY_IF(this->dh);
 #ifdef QSKE
-	DESTROY_IF(this->qs_dh);
+	DESTROY_IF(this->qs);
 #endif
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->nonceg);
@@ -1200,7 +1198,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.dh_group = MODP_NONE,
 		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
 #ifdef QSKE
-		.qs_dh_group = MODP_NONE,
+		.qs_group = QS_NONE,
 		.qs_keymat = (keymat_v2_t*)ike_sa->get_qs_keymat(ike_sa),
 #endif
 		.old_sa = old_sa,

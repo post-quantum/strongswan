@@ -56,6 +56,9 @@ struct entry_t {
 		rng_constructor_t create_rng;
 		nonce_gen_constructor_t create_nonce_gen;
 		dh_constructor_t create_dh;
+#ifdef QSKE
+		qs_constructor_t create_qs;
+#endif
 		void *create;
 	};
 };
@@ -116,6 +119,13 @@ struct private_crypto_factory_t {
 	 * registered diffie hellman, as entry_t
 	 */
 	linked_list_t *dhs;
+
+#ifdef QSKE
+	/**
+	 * registered quantum-safe key exchange providers, as entry_t
+	 */
+	linked_list_t *qss;
+#endif
 
 	/**
 	 * test manager to test crypto algorithms
@@ -437,6 +447,40 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 	this->lock->unlock(this->lock);
 	return diffie_hellman;
 }
+
+#ifdef QSKE
+METHOD(crypto_factory_t, create_qs, quantum_safe_t*,
+	private_crypto_factory_t *this, quantum_safe_group_t group, ...)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	quantum_safe_t *qs = NULL;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->qss->create_enumerator(this->qss);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->algo == group)
+		{
+/* TODO: implement testing			
+			if (this->test_on_create &&
+				!this->tester->test_dh(this->tester, group,
+								entry->create_qs, NULL, default_plugin_name))
+			{
+				continue;
+			}*/
+			qs = entry->create_qs(group);
+			if (qs)
+			{
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+	return qs;
+}
+#endif
 
 /**
  * Insert an algorithm entry to a list
@@ -811,6 +855,38 @@ METHOD(crypto_factory_t, remove_dh, void,
 	this->lock->unlock(this->lock);
 }
 
+#ifdef QSKE
+
+METHOD(crypto_factory_t, add_qs, bool,
+	private_crypto_factory_t *this, quantum_safe_group_t group,
+	const char *plugin_name, qs_constructor_t create)
+{
+	add_entry(this, this->qss, group, plugin_name, 0, create);
+	return TRUE;
+}
+
+METHOD(crypto_factory_t, remove_qs, void,
+	private_crypto_factory_t *this, qs_constructor_t create)
+{
+	entry_t *entry;
+	enumerator_t *enumerator;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->qss->create_enumerator(this->qss);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->create_qs == create)
+		{
+			this->qss->remove_at(this->qss, enumerator);
+			free(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
+#endif
+
 /**
  * match algorithms of an entry?
  */
@@ -1117,6 +1193,11 @@ METHOD(crypto_factory_t, create_verify_enumerator, enumerator_t*,
 		case DIFFIE_HELLMAN_GROUP:
 			inner = this->dhs->create_enumerator(this->dhs);
 			break;
+#ifdef QSKE
+		case QUANTUM_SAFE_GROUP:
+			inner = this->qss->create_enumerator(this->qss);
+			break;
+#endif
 		default:
 			this->lock->unlock(this->lock);
 			return enumerator_create_empty();
@@ -1146,6 +1227,9 @@ METHOD(crypto_factory_t, destroy, void,
 	this->rngs->destroy(this->rngs);
 	this->nonce_gens->destroy(this->nonce_gens);
 	this->dhs->destroy(this->dhs);
+#ifdef QSKE
+	this->qss->destroy(this->qss);
+#endif
 	this->tester->destroy(this->tester);
 	this->lock->destroy(this->lock);
 	free(this);
@@ -1169,6 +1253,9 @@ crypto_factory_t *crypto_factory_create()
 			.create_rng = _create_rng,
 			.create_nonce_gen = _create_nonce_gen,
 			.create_dh = _create_dh,
+#ifdef QSKE
+			.create_qs = _create_qs,
+#endif
 			.add_crypter = _add_crypter,
 			.remove_crypter = _remove_crypter,
 			.add_aead = _add_aead,
@@ -1187,6 +1274,10 @@ crypto_factory_t *crypto_factory_create()
 			.remove_nonce_gen = _remove_nonce_gen,
 			.add_dh = _add_dh,
 			.remove_dh = _remove_dh,
+#ifdef QSKE
+			.add_qs = _add_qs,
+			.remove_qs = _remove_qs,
+#endif
 			.create_crypter_enumerator = _create_crypter_enumerator,
 			.create_aead_enumerator = _create_aead_enumerator,
 			.create_signer_enumerator = _create_signer_enumerator,
@@ -1209,6 +1300,9 @@ crypto_factory_t *crypto_factory_create()
 		.rngs = linked_list_create(),
 		.nonce_gens = linked_list_create(),
 		.dhs = linked_list_create(),
+#ifdef QSKE
+		.qss = linked_list_create(),
+#endif
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.tester = crypto_tester_create(),
 		.test_on_add = lib->settings->get_bool(lib->settings,

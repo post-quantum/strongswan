@@ -15,6 +15,7 @@
 
 #include "ntru_prime_plugin.h"
 #include "ntru_prime_ke.h"
+#include "ntru_prime_qske.h"
 
 #include <library.h>
 
@@ -44,6 +45,11 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(DH, ntru_prime_ke_create),
 			PLUGIN_PROVIDE(DH, NTRU_PRIME_129_BIT),
 				PLUGIN_DEPENDS(HASHER, HASH_SHA512),
+#ifdef QSKE
+		PLUGIN_REGISTER(QS, ntru_prime_qske_create),
+			PLUGIN_PROVIDE(QS, QS_NTRU_PRIME_129_BIT),
+				PLUGIN_DEPENDS(HASHER, HASH_SHA512),
+#endif
 	};
 	*features = f;
 

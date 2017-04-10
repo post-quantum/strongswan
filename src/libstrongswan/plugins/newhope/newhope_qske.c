@@ -16,27 +16,31 @@
  * for more details.
  */
 
-#include "newhope_ke.h"
+#ifdef QSKE
+
+#include "newhope_qske.h"
 #include "newhope_poly.h"
 #include "newhope_noise.h"
 #include "newhope_reconciliation.h"
 
+#include <crypto/quantum_safe.h>
+#include <utils/debug.h>
 
 static const int seed_len =   32;  /* 256 bits */
 static const int poly_len = 1792;  /* size of 1024 packed 14-bit coefficients */
 static const int rec_len =   256;  /* size of 1024 packed  2-bit coefficients */
 
-typedef struct private_newhope_ke_t private_newhope_ke_t;
+typedef struct private_newhope_qske_t private_newhope_qske_t;
 
 /**
- * Private data of an newhope_ke_t object.
+ * Private data of an newhope_qske_t object.
  */
-struct private_newhope_ke_t {
+struct private_newhope_qske_t {
 
 	/**
-	 * Public newhope_ke_t interface.
+	 * Public newhope_qske_t interface.
 	 */
-	newhope_ke_t public;
+	newhope_qske_t public;
 
 	/**
 	 * FFT parameter set
@@ -66,7 +70,7 @@ struct private_newhope_ke_t {
 };
 
 
-#define METHOD_KE(name, ret, ...) METHOD(diffie_hellman_t, name, ret, private_newhope_ke_t *this, ##__VA_ARGS__)
+#define METHOD_KE(name, ret, ...) METHOD(quantum_safe_t, name, ret, private_newhope_qske_t *this, ##__VA_ARGS__)
 
 METHOD_KE(get_my_public_value, bool, chunk_t *value)
 {
@@ -368,11 +372,11 @@ METHOD_KE(set_other_public_value, bool, chunk_t value)
 	}
 }
 
-METHOD_KE(get_dh_group, diffie_hellman_group_t)
-{
-	return NH_128_BIT;
-}
 
+METHOD_KE(get_qs_group, quantum_safe_group_t)
+{
+	return QS_NH_128_BIT;
+}
 
 METHOD_KE(destroy, void)
 {
@@ -387,17 +391,17 @@ METHOD_KE(destroy, void)
 /*
  * Described in header.
  */
-newhope_ke_t *newhope_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
+newhope_qske_t *newhope_qske_create(quantum_safe_group_t group, chunk_t g, chunk_t p)
 {
-	private_newhope_ke_t *this;
+	private_newhope_qske_t *this;
 
 	INIT(this,
 		.public = {
-			.dh = {
+			.qs = {
+				.get_qs_group = _get_qs_group,
 				.get_shared_secret = _get_shared_secret,
 				.set_other_public_value = _set_other_public_value,
 				.get_my_public_value = _get_my_public_value,
-				.get_dh_group = _get_dh_group,
 				.destroy = _destroy,
 			},
 		},
@@ -407,3 +411,5 @@ newhope_ke_t *newhope_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t
 
 	return &this->public;
 }
+
+#endif

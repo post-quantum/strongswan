@@ -207,11 +207,11 @@ struct ike_cfg_t {
 
 #ifdef QSKE
 	/**
-	 * Get the QS DH group to use for IKE_SA setup.
+	 * Get the QS group to use for IKE_SA setup.
 	 *
-	 * @return              QS dh group to use for initialization
+	 * @return              QS group to use for initialization
 	 */
-    diffie_hellman_group_t (*get_qs_dh_group)(ike_cfg_t *this);
+    quantum_safe_group_t (*get_qs_group)(ike_cfg_t *this);
 #endif
 
 	/**

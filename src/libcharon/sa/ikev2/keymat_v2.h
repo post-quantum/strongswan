@@ -44,7 +44,7 @@ struct keymat_v2_t {
 	 *
 	 * @param proposal	selected algorithms
 	 * @param dh		diffie hellman key allocated by create_dh()
-	 * @param qs_dh     quantum-safe key allocated by create_dh()
+	 * @param qs_dh     quantum-safe key allocated by create_qs()
 	 * @param nonce_i	initiators nonce value
 	 * @param nonce_r	responders nonce value
 	 * @param id		IKE_SA identifier
@@ -55,7 +55,7 @@ struct keymat_v2_t {
 	bool (*derive_ike_keys)(keymat_v2_t *this, proposal_t *proposal,
 							diffie_hellman_t *dh,
 #ifdef QSKE
-							diffie_hellman_t *qs_dh,
+							quantum_safe_t *qs,
 #endif
 							chunk_t nonce_i,
 							chunk_t nonce_r, ike_sa_id_t *id,
@@ -72,7 +72,7 @@ struct keymat_v2_t {
 	 *
 	 * @param proposal	selected algorithms
 	 * @param dh		diffie hellman key allocated by create_dh(), or NULL
-	 * @param qs_dh     quantum-safe key allocated by create_dh(), or NULL
+	 * @param qs        quantum-safe key allocated by create_qs(), or NULL
 	 * @param nonce_i	initiators nonce value
 	 * @param nonce_r	responders nonce value
 	 * @param encr_i	chunk to write initiators encryption key to
@@ -84,7 +84,7 @@ struct keymat_v2_t {
 	bool (*derive_child_keys)(keymat_v2_t *this,
 							  proposal_t *proposal, diffie_hellman_t *dh,
 #ifdef QSKE
-							  diffie_hellman_t *qs_dh,
+							  quantum_safe_t *qs,
 #endif
 							  chunk_t nonce_i, chunk_t nonce_r,
 							  chunk_t *encr_i, chunk_t *integ_i,

@@ -29,6 +29,10 @@ typedef struct diffie_hellman_params_t diffie_hellman_params_t;
 
 #include <library.h>
 
+#ifdef QSKE
+#include "quantum_safe.h"
+#endif
+
 /**
  * Diffie-Hellman group.
  *
@@ -77,13 +81,6 @@ enum diffie_hellman_group_t {
 	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */
 	MODP_CUSTOM = 65536,
 };
-
-#define DH_IS_QUANTUM_SAFE(dh) ((dh==NTRU_112_BIT) || \
-							 	(dh==NTRU_128_BIT) || \
-								(dh==NTRU_192_BIT) || \
-								(dh==NTRU_256_BIT) || \
-								(dh==NH_128_BIT)  || \
-								(dh==NTRU_PRIME_129_BIT))
 
 /**
  * enum name for diffie_hellman_group_t.

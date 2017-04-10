@@ -499,64 +499,64 @@ METHOD(child_cfg_t, get_dh_group, diffie_hellman_group_t,
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm_dh(proposal, true, false, &dh_group, NULL))
+		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
 		{
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 
-#ifdef QSKE
-	// If we have no DH group then check for a QS DH group i.e. a non-hybrid proposal
-	// that happens to use a QS DH group
+/*#ifdef QSKE
+	// If we have no DH group then check for a QS group i.e. a non-hybrid proposal
+	// that happens to use a QS group
 	if (dh_group == MODP_NONE) 
 	{
 		enumerator = this->proposals->create_enumerator(this->proposals);
 		while (enumerator->enumerate(enumerator, &proposal))
 		{
-			if (proposal->get_algorithm_dh(proposal, false, true, &dh_group, NULL))
+			if (proposal->get_algorithm(proposal, QUANTUM_SAFE_GROUP, &dh_group, NULL))
 			{
 				break;
 			}
 		}
 		enumerator->destroy(enumerator);
 	}
-#endif
+#endif*/
 
 	return dh_group;
 }
 
 #ifdef QSKE
-METHOD(child_cfg_t, get_qs_dh_group, diffie_hellman_group_t,
+METHOD(child_cfg_t, get_qs_group, quantum_safe_group_t,
 	private_child_cfg_t *this)
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
-	uint16_t qs_dh_group = MODP_NONE;
+	uint16_t qs_group = QS_NONE;
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm_dh(proposal, false, true, &qs_dh_group, NULL))
+		if (proposal->get_algorithm(proposal, QUANTUM_SAFE_GROUP, &qs_group, NULL))
 		{
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	// If we have a QS DH group, but no DH group, then this is a non-hybrid proposal
+	// If we have a QS group, but no DH group, then this is a non-hybrid proposal
 	// and we should return MODP_NONE from here cos the QS DH group will be returned
-	// by get_dh_group(), not get_qs_dh_group().
+	// by get_dh_group(), not get_qs_group().
 	//
-	// i.e. get_qs_dh_group() should only return valid DH methods for hybrid proposals.
+	// i.e. get_qs_group() should only return valid DH methods for hybrid proposals.
 	//
-	if (qs_dh_group != MODP_NONE)
+	/*if (qs_group != QS_NONE)
 	{
 		uint16_t dh_group = MODP_NONE;
 		enumerator = this->proposals->create_enumerator(this->proposals);
 		while (enumerator->enumerate(enumerator, &proposal))
 		{
-			if (proposal->get_algorithm_dh(proposal, true, false, &dh_group, NULL))
+			if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
 			{
 				break;
 			}
@@ -564,11 +564,11 @@ METHOD(child_cfg_t, get_qs_dh_group, diffie_hellman_group_t,
 		enumerator->destroy(enumerator);
 		if (dh_group == MODP_NONE) 
 		{
-			qs_dh_group = MODP_NONE;
+			qs_group = QS_NONE;
 		}
-	}
+	}*/
 
-	return qs_dh_group;
+	return qs_group;
 }
 #endif
 
@@ -744,7 +744,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_lifetime = _get_lifetime,
 			.get_dh_group = _get_dh_group,
 #ifdef QSKE
-			.get_qs_dh_group = _get_qs_dh_group,
+			.get_qs_group = _get_qs_group,
 #endif
 			.use_ipcomp = _use_ipcomp,
 			.get_inactivity = _get_inactivity,

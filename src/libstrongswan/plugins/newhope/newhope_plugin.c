@@ -15,6 +15,7 @@
 
 #include "newhope_plugin.h"
 #include "newhope_ke.h"
+#include "newhope_qske.h"
 
 #include <library.h>
 
@@ -45,6 +46,12 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, NH_128_BIT),
 				PLUGIN_DEPENDS(XOF, XOF_SHAKE_128),
 				PLUGIN_DEPENDS(XOF, XOF_CHACHA20),
+#ifdef QSKE
+		PLUGIN_REGISTER(QS, newhope_qske_create),
+			PLUGIN_PROVIDE(QS, QS_NH_128_BIT),
+				PLUGIN_DEPENDS(XOF, XOF_SHAKE_128),
+				PLUGIN_DEPENDS(XOF, XOF_CHACHA20),
+#endif
 	};
 	*features = f;
 

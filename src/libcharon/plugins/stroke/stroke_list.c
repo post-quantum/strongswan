@@ -267,16 +267,16 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 						fprintf(out, "_%u", ks);
 					}
 				}
-				if (proposal->get_algorithm_dh(proposal, true, false,
+				if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
 											&alg, NULL))
 				{
 					fprintf(out, "/%N", diffie_hellman_group_names, alg);
 				}
 #ifdef QSKE
-				if (proposal->get_algorithm_dh(proposal, false, true,
+				if (proposal->get_algorithm(proposal, QUANTUM_SAFE_GROUP,
 											&alg, NULL))
 				{
-					fprintf(out, "/%N", diffie_hellman_group_names, alg);
+					fprintf(out, "/%N", quantum_safe_group_names, alg);
 				}
 #endif
 				if (proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,

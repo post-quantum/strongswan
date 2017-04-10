@@ -35,6 +35,9 @@ typedef struct crypto_factory_t crypto_factory_t;
 #include <crypto/xofs/xof.h>
 #include <crypto/nonce_gen.h>
 #include <crypto/diffie_hellman.h>
+#ifdef QSKE
+#include <crypto/quantum_safe.h>
+#endif
 #include <crypto/transform.h>
 
 #define CRYPTO_MAX_ALG_LINE          120   /* characters */
@@ -86,6 +89,15 @@ typedef nonce_gen_t* (*nonce_gen_constructor_t)();
  * - MODP_CUSTOM: chunk_t generator, chunk_t prime
  */
 typedef diffie_hellman_t* (*dh_constructor_t)(diffie_hellman_group_t group, ...);
+
+#ifdef QSKE
+
+/**
+ * Constructor function for quantum-safe key exchange
+ */
+typedef quantum_safe_t* (*qs_constructor_t)(quantum_safe_group_t group, ...);
+
+#endif
 
 /**
  * Handles crypto modules and creates instances.
@@ -172,6 +184,19 @@ struct crypto_factory_t {
 	 */
 	diffie_hellman_t* (*create_dh)(crypto_factory_t *this,
 								   diffie_hellman_group_t group, ...);
+
+#ifdef QSKE
+	/**
+	 * Create a quantum-safe key exchange instance.
+	 *
+	 * Additional arguments are passed to the constructor.
+	 *
+	 * @param group			QS group
+	 * @return				quantum_safe_t instance, NULL if not supported
+	 */
+	quantum_safe_t* (*create_qs)(crypto_factory_t *this,
+								   quantum_safe_group_t group, ...);
+#endif								   
 
 	/**
 	 * Register a crypter constructor.
@@ -338,6 +363,26 @@ struct crypto_factory_t {
 	 * @param create		constructor function to unregister
 	 */
 	void (*remove_dh)(crypto_factory_t *this, dh_constructor_t create);
+
+#ifdef QSKE
+	/**
+	 * Register a quantum-safe key exchange constructor.
+	 *
+	 * @param group			QS group to constructor
+	 * @param plugin_name	plugin that registered this algorithm
+	 * @param create		constructor function for that algorithm
+	 * @return				TRUE if registered, FALSE if test vector failed
+	 */
+	bool (*add_qs)(crypto_factory_t *this, quantum_safe_group_t group,
+				   const char *plugin_name, qs_constructor_t create);
+
+	/**
+	 * Unregister a quantum-safe key exchange  constructor.
+	 *
+	 * @param create		constructor function to unregister
+	 */
+	void (*remove_qs)(crypto_factory_t *this, qs_constructor_t create);
+#endif
 
 	/**
 	 * Create an enumerator over all registered crypter algorithms.
