@@ -254,51 +254,23 @@ qske_payload_t *qske_payload_create(payload_type_t type)
 /*
  * Described in header
  */
-int qske_payload_create_from_qs(payload_type_t type,
-								quantum_safe_t *qs, 
-								qske_payload_t ***payloads)
+qske_payload_t* qske_payload_create_from_qs(payload_type_t type, quantum_safe_t *qs)
 {
 	chunk_t value;
 
-	*payloads = NULL;
 	if (!qs->get_my_public_value(qs, &value))
 	{
-		return 0;
+		return NULL;
 	}
 
 #if defined(PQPERF)
 	printf("PQPERF: qske_payload data len = %lu\n", value.len);
 #endif
 
-	size_t max_payload_chunk_size = 65535 - offsetof(private_qske_payload_t, key_exchange_data);
-	
-	// Testing: enforce a small payload max size to test multipayloads
-	//max_payload_chunk_size = 64;
+	private_qske_payload_t* payload = (private_qske_payload_t*)qske_payload_create(type);
+	payload->qs_group_number = qs->get_qs_group(qs);
+	payload->key_exchange_data = value;
+	payload->payload_length += value.len;
 
-	// Create enough payloads to hold the QS key exchange data
-	int num_payloads = (value.len + max_payload_chunk_size - 1) / max_payload_chunk_size;
-	int offset = 0;
-	int remaining = value.len;
-	if (num_payloads > 1) 
-	{
-		DBG0(DBG_ENC, "*** WARNING! QSKE payload splitting is likely broken **");
-	}
-	*payloads = (qske_payload_t**)malloc(sizeof(qske_payload_t*) * num_payloads);
-	int i;
-	for (i=0 ; i<num_payloads ; i++)
-	{
-		DBG1(DBG_ENC, "Creating QSKE mini payload %d", i);
-		private_qske_payload_t* payload = (private_qske_payload_t*)qske_payload_create(type);
-		payload->qs_group_number = i ? 0 : qs->get_qs_group(qs);
-		int payload_chunk_len = min(max_payload_chunk_size, remaining);
-		payload->key_exchange_data = chunk_alloc(payload_chunk_len);
-		memcpy(payload->key_exchange_data.ptr, value.ptr + offset, payload_chunk_len);
-		payload->payload_length += payload_chunk_len;
-		(*payloads)[i] = &payload->public;
-		offset += payload_chunk_len;
-		remaining -= payload_chunk_len;
-	}
-	chunk_free(&value);
-
-	return num_payloads;
+	return &payload->public;
 }

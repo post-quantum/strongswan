@@ -365,19 +365,14 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	/* quantum-safe key exchange, if PFS enabled */
 	if (this->qs)
 	{
-		qske_payload_t** payloads = NULL;
-		int num_payloads = qske_payload_create_from_qs(
-							PLV2_QSKEY_EXCHANGE, this->qs, &payloads);
-		if (!num_payloads)
+		qske_payload_t* payload = qske_payload_create_from_qs(
+							PLV2_QSKEY_EXCHANGE, this->qs);
+		if (!payload)
 		{
 			DBG1(DBG_IKE, "creating QSKE payload failed");
 			return FALSE;
 		}
-		int i;
-		for (i=0 ; i<num_payloads ; i++) {
-			message->add_payload(message, (payload_t*)payloads[i]);
-		}
-		free(payloads);
+		message->add_payload(message, (payload_t*)payload);
 	}
 #endif
 
@@ -863,7 +858,7 @@ METHOD(task_t, build_r, status_t,
 					quantum_safe_group_names, group);
 				this->qs_group = group;
 				group = htons(group);
-				message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
+				message->add_notify(message, FALSE, INVALID_QSKE_PAYLOAD,
 									chunk_from_thing(group));
 			}
 			else
@@ -1139,7 +1134,7 @@ METHOD(task_t, migrate, void,
 	this->qs_failed = FALSE;
 	if (this->qs &&
 		this->qs->get_qs_group(this->qs) != this->qs_group)
-	{       /* reset QS value only if group changed (INVALID_KE_PAYLOAD) */
+	{       /* reset QS value only if group changed (INVALID_QSKE_PAYLOAD) */
 		this->qs->destroy(this->qs);
 		this->qs = this->qs_keymat->keymat.create_qs(
 												&this->qs_keymat->keymat,

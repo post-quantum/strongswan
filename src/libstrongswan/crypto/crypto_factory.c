@@ -462,13 +462,6 @@ METHOD(crypto_factory_t, create_qs, quantum_safe_t*,
 	{
 		if (entry->algo == group)
 		{
-/* TODO: implement testing			
-			if (this->test_on_create &&
-				!this->tester->test_dh(this->tester, group,
-								entry->create_qs, NULL, default_plugin_name))
-			{
-				continue;
-			}*/
 			qs = entry->create_qs(group);
 			if (qs)
 			{

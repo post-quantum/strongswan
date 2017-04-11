@@ -69,21 +69,18 @@ struct qske_payload_t {
 /**
  * Creates an empty qske_payload_t object.
  *
- * @param type		PLV2_KEY_EXCHANGE or PLV1_KEY_EXCHANGE
+ * @param type		Must be PLV2_QSKEY_EXCHANGE
  * @return			qske_payload_t object
  */
 qske_payload_t *qske_payload_create(payload_type_t type);
 
 /**
- * Creates one or more qske_payload_t from a diffie_hellman_t.
- * (large qs key_exchange_data means we need multiple payloads)
+ * Creates a qske_payload_t from a quantum_safe_t.
  *
- * @param type		PLV2_KEY_EXCHANGE or PLV1_KEY_EXCHANGE
- * @param dh		quantum safe exchange object containing group and key
- * @param payloads	points to returned array of qske_payload_t*
- * @return 			number of payloads in the array, 0 on error
+ * @param type		Must be PLV2_QSKEY_EXCHANGE
+ * @param qs		quantum safe exchange object containing group and key
+ * @return 			qske_payload_t* or null on error
  */
-int qske_payload_create_from_qs(payload_type_t type, quantum_safe_t *qs, 
-									qske_payload_t ***payloads);
+qske_payload_t* qske_payload_create_from_qs(payload_type_t type, quantum_safe_t *qs);
 
 #endif /** QSKE_PAYLOAD_H_ @}*/

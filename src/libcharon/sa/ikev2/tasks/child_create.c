@@ -869,19 +869,14 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
 	/* quantum-safe key exchange, if PFS enabled */
 	if (this->qs)
 	{
-		qske_payload_t** payloads = NULL;
-		int num_payloads = qske_payload_create_from_qs(
-							PLV2_QSKEY_EXCHANGE, this->qs, &payloads);
-		if (!num_payloads)
+		qske_payload_t* payload = qske_payload_create_from_qs(
+							PLV2_QSKEY_EXCHANGE, this->qs);
+		if (!payload)
 		{
 			DBG1(DBG_IKE, "creating QSKE payload failed");
 			return FALSE;
 		}
-		int i;
-		for (i=0 ; i<num_payloads ; i++) {
-			message->add_payload(message, (payload_t*)payloads[i]);
-		}
-		free(payloads);
+		message->add_payload(message, (payload_t*)payload);
 	}
 #endif
 

@@ -141,35 +141,6 @@ METHOD(proposal_t, get_algorithm, bool,
 
 	return found;
 }
-/*METHOD(proposal_t, get_algorithm_dh, bool,
-	private_proposal_t *this, bool allow_non_qs, bool allow_qs,
-	uint16_t *alg, uint16_t *key_size)
-{
-	enumerator_t *enumerator;
-	bool found = FALSE;
-
-	enumerator = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
-	while (enumerator->enumerate(enumerator, alg, key_size))
-	{
-		if (allow_non_qs && !DH_IS_QUANTUM_SAFE(*alg)) 
-		{
-			found = TRUE;
-			break;
-		}
-		if (allow_qs && DH_IS_QUANTUM_SAFE(*alg)) 
-		{
-			found = TRUE;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-    if (!found)
-    {
-        *alg = MODP_NONE;
-    }
-	return found;
-}*/
 
 METHOD(proposal_t, has_dh_group, bool,
 	private_proposal_t *this, diffie_hellman_group_t group)
@@ -239,7 +210,7 @@ METHOD(proposal_t, has_qs_group, bool,
 	{
 		found = TRUE;
 	}
-	DBG1(DBG_IKE, "\n# has_qs_group: %d\n\n", found);
+
 	return found;
 }
 
@@ -351,78 +322,6 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 	return found;
 }
 
-/*static bool select_algo_dh(private_proposal_t *this, proposal_t *other,
-						proposal_t *selected, bool qs, bool priv)
-{
-	enumerator_t *e1, *e2;
-	uint16_t alg1, alg2, ks1, ks2;
-	bool found = FALSE;
-
-
-
-	bool optional = this->protocol == PROTO_ESP || this->protocol == PROTO_AH;
-	
-	alg1 = _get_dh_group(this, qs);
-	alg2 = _get_dh_group((private_proposal_t*)other, qs);
-
-	if (!alg1)
-	{
-		if (!alg2)
-		{
-			found = TRUE;
-		}
-		else if (optional)
-		{
-			found = !alg2;
-		}
-	}
-	else if (!alg2)
-	{
-		if (optional)
-		{
-			found = !alg1;
-		}
-	}
-
-
-
-	e1 = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
-	// compare algs, order of algs in "first" is preferred 
-	while (!found && e1->enumerate(e1, &alg1, &ks1))
-	{
-		if (qs && !DH_IS_QUANTUM_SAFE(alg1)) continue;
-		if (!qs && DH_IS_QUANTUM_SAFE(alg1)) continue;
-
-		e2 = other->create_enumerator(other, DIFFIE_HELLMAN_GROUP);
-		while (e2->enumerate(e2, &alg2, &ks2))
-		{
-			if (qs && !DH_IS_QUANTUM_SAFE(alg2)) continue;
-			if (!qs && DH_IS_QUANTUM_SAFE(alg2)) continue;
-
-			if (alg1 == alg2 && ks1 == ks2)
-			{
-				if (!priv && alg1 >= 1024)
-				{
-					// accept private use algorithms only if requested 
-					DBG1(DBG_CFG, "an algorithm from private space would match, "
-						 "but peer implementation is unknown, skipped");
-					continue;
-				}
-				selected->add_algorithm(selected, DIFFIE_HELLMAN_GROUP, alg1, ks1);
-				found = TRUE;
-				break;
-			}
-		}
-		e2->destroy(e2);
-	}
-	e1->destroy(e1);
-
-	if (!found)
-	{
-		DBG2(DBG_CFG, "  no acceptable %N found", transform_type_names, DIFFIE_HELLMAN_GROUP);
-	}
-	return found;
-}*/
 
 METHOD(proposal_t, select_proposal, proposal_t*,
 	private_proposal_t *this, proposal_t *other, bool other_remote,
