@@ -1632,6 +1632,29 @@ METHOD(task_t, process_i, status_t,
 					enumerator->destroy(enumerator);
 					return NEED_MORE;
 				}
+#ifdef QSKE
+				case INVALID_QSKE_PAYLOAD:
+				{
+					chunk_t data;
+					uint16_t group = QS_NONE;
+
+					data = notify->get_notification_data(notify);
+					if (data.len == sizeof(group))
+					{
+						memcpy(&group, data.ptr, data.len);
+						group = ntohs(group);
+					}
+					DBG1(DBG_IKE, "peer didn't accept QS group %N, "
+						 "it requested %N",quantum_safe_group_names,
+						 this->qs_group, quantum_safe_group_names, group);
+					this->retry = TRUE;
+					this->qs_group = group;
+					this->child_sa->set_state(this->child_sa, CHILD_RETRYING);
+					this->public.task.migrate(&this->public.task, this->ike_sa);
+					enumerator->destroy(enumerator);
+					return NEED_MORE;
+				}
+#endif
 				default:
 				{
 					if (message->get_exchange_type(message) == CREATE_CHILD_SA)

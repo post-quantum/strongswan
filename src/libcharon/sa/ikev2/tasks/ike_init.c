@@ -997,6 +997,29 @@ METHOD(task_t, process_i, status_t,
 					this->retry++;
 					return NEED_MORE;
 				}
+#ifdef QSKE
+				case INVALID_QSKE_PAYLOAD:
+				{
+					chunk_t data;
+					quantum_safe_group_t bad_group;
+
+					bad_group = this->qs_group;
+					data = notify->get_notification_data(notify);
+					this->qs_group = ntohs(*((uint16_t*)data.ptr));
+					DBG1(DBG_IKE, "peer didn't accept QS group %N, "
+						 "it requested %N", quantum_safe_group_names,
+						 bad_group, quantum_safe_group_names, this->qs_group);
+
+					if (this->old_sa == NULL)
+					{	/* reset the IKE_SA if we are not rekeying */
+						this->ike_sa->reset(this->ike_sa);
+					}
+
+					enumerator->destroy(enumerator);
+					this->retry++;
+					return NEED_MORE;
+				}
+#endif
 				case NAT_DETECTION_SOURCE_IP:
 				case NAT_DETECTION_DESTINATION_IP:
 					/* skip, handled in ike_natd_t */
