@@ -29,6 +29,7 @@
 #include <processing/jobs/callback_job.h>
 #include <threading/rwlock.h>
 #include <threading/thread.h>
+#include <credentials/sets/mem_cred.h>
 
 typedef struct private_android_service_t private_android_service_t;
 
@@ -625,7 +626,7 @@ METHOD(listener_t, alert, bool,
 	}
 	return stay_registered;
 }
-
+/*
 static void add_auth_cfg_pw(private_android_service_t *this,
 							peer_cfg_t *peer_cfg, bool byod)
 {
@@ -636,7 +637,7 @@ static void add_auth_cfg_pw(private_android_service_t *this,
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
 	if (byod)
-	{	/* use EAP-TTLS if BYOD is enabled */
+	{	// use EAP-TTLS if BYOD is enabled
 		auth->add(auth, AUTH_RULE_EAP_TYPE, EAP_TTLS);
 	}
 
@@ -660,8 +661,8 @@ static void add_auth_cfg_pw(private_android_service_t *this,
 
 	this->creds->add_username_password(this->creds, username, password);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
-}
-
+}*/
+/*
 static bool add_auth_cfg_cert(private_android_service_t *this,
 							  peer_cfg_t *peer_cfg)
 {
@@ -678,6 +679,7 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 
 	type = this->settings->get_str(this->settings, "connection.type", NULL);
 	auth = auth_cfg_create();
+	
 	if (strpfx("ikev2-eap-tls", type))
 	{
 		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
@@ -706,6 +708,9 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
 	return TRUE;
 }
+*/
+
+static mem_cred_t* s_creds = NULL;
 
 static job_requeue_t initiate(private_android_service_t *this)
 {
@@ -717,11 +722,12 @@ static job_requeue_t initiate(private_android_service_t *this)
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
 	peer_cfg_create_t peer = {
-		.cert_policy = CERT_SEND_IF_ASKED,
+		.cert_policy = CERT_NEVER_SEND,
 		.unique = UNIQUE_REPLACE,
 		.rekey_time = 36000, /* 10h */
 		.jitter_time = 600, /* 10min */
 		.over_time = 600, /* 10min */
+		.no_mobike = TRUE,
 	};
 	child_cfg_create_t child = {
 		.lifetime = {
@@ -737,11 +743,12 @@ static job_requeue_t initiate(private_android_service_t *this)
 	};
 	char *type, *server, *remote_id;
 	int port;
+	char* psk;
 
 	server = this->settings->get_str(this->settings, "connection.server", NULL);
 	port = this->settings->get_int(this->settings, "connection.port",
 								   IKEV2_UDP_PORT);
-	ike_cfg = ike_cfg_create(IKEV2, TRUE, TRUE, "0.0.0.0",
+	ike_cfg = ike_cfg_create(IKEV2, FALSE, TRUE, "0.0.0.0",
 							 charon->socket->get_port(charon->socket, FALSE),
 							 server, port, FRAGMENTATION_YES, 0);
 
@@ -752,26 +759,46 @@ static job_requeue_t initiate(private_android_service_t *this)
 	//ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	//ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
-		"aes256-sha256-modp3072-newhope128"));
+		"aes256-sha256-modp3072-qs_newhope128"));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
-        "aes256-sha256-modp3072-ntru128"));
+        "aes256-sha256-modp3072-qs_ntru128"));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
-		"aes256-sha256-modp3072-ntruprime129"));
+		"aes256-sha256-modp3072-qs_ntruprime129"));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
-        "aes256-sha256-ecp256-newhope128"));
+        "aes256-sha256-ecp256-qs_newhope128"));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
-		"aes256-sha256-ecp256-ntru128"));
+		"aes256-sha256-ecp256-qs_ntru128"));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
-        "aes256-sha256-ecp256-ntruprime129"));
+        "aes256-sha256-ecp256-qs_ntruprime129"));
 
+
+	// Create (or re-create) the entity that provides the PSK during authentication
+	psk = this->settings->get_str(this->settings, "connection.password", NULL);
+	if (s_creds) {
+		lib->credmgr->remove_set(lib->credmgr, &s_creds->set);
+		s_creds->destroy(s_creds);
+		s_creds = NULL;
+	}
+	s_creds = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &s_creds->set);
+	s_creds->add_shared(s_creds,
+			shared_key_create(SHARED_IKE, chunk_clone(chunk_from_str(psk))),
+			identification_create_from_string("%any"), NULL);
 
 
 	peer_cfg = peer_cfg_create("android", ike_cfg, &peer);
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
 
-	type = this->settings->get_str(this->settings, "connection.type", NULL);
+
 	/* local auth config */
+    auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+
+
+	/*
+	type = this->settings->get_str(this->settings, "connection.type", NULL);
 	if (streq("ikev2-cert", type) ||
 		streq("ikev2-cert-eap", type) ||
 		streq("ikev2-eap-tls", type))
@@ -789,12 +816,10 @@ static job_requeue_t initiate(private_android_service_t *this)
 		streq("ikev2-byod-eap", type))
 	{
 		add_auth_cfg_pw(this, peer_cfg, strpfx(type, "ikev2-byod"));
-	}
+	}*/
 
 	/* remote auth config */
-	auth = auth_cfg_create();
-	remote_id = this->settings->get_str(this->settings, "connection.remote_id",
-										NULL);
+	/*remote_id = this->settings->get_str(this->settings, "connection.remote_id", NULL);
 	if (remote_id)
 	{
 		gateway = identification_create_from_string(remote_id);
@@ -803,21 +828,21 @@ static job_requeue_t initiate(private_android_service_t *this)
 	{
 		DESTROY_IF(gateway);
 		gateway = identification_create_from_string(server);
-		/* only use this if remote ID was not configured explicitly */
+		// only use this if remote ID was not configured explicitly
 		auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
 	}
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
-	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
-	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);*/
 
 	child_cfg = child_cfg_create("android", &child);
 
     // CJ's desired config:
     //  esp=aes256-sha256-modp3072-newhope128,aes256-sha256-ecp256-newhope128!
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes256-sha256-modp3072-newhope128"));
+							"aes256-sha256-modp3072-qs_newhope128"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes256-sha256-ecp256-newhope128"));
+							"aes256-sha256-ecp256-qs_newhope128"));
 
 	/* create ESP proposals with and without DH groups, let responder decide
 	 * if PFS is used */
