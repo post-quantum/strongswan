@@ -15,7 +15,7 @@ strongswan_BYOD_PLUGINS := eap-ttls eap-tnc tnc-imc tnc-tnccs tnccs-20 sha3 chap
 endif
 
 strongswan_PLUGINS := $(strongswan_CHARON_PLUGINS) \
-	$(strongswan_BYOD_PLUGINS) sha3 chapoly mgf1 newhope ntru ntru_prime
+	$(strongswan_BYOD_PLUGINS) sha3 mgf1 newhope ntru ntru_prime
 
 strongswan_DIR := ../../../../../../../
 

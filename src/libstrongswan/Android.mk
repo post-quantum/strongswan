@@ -14,6 +14,7 @@ crypto/prfs/prf.c crypto/prfs/mac_prf.c crypto/pkcs5.c \
 crypto/rngs/rng.c crypto/prf_plus.c crypto/signers/signer.c \
 crypto/signers/mac_signer.c crypto/crypto_factory.c crypto/crypto_tester.c \
 crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
+crypto/quantum_safe.c \
 crypto/iv/iv_gen.c crypto/iv/iv_gen_rand.c crypto/iv/iv_gen_seq.c \
 crypto/iv/iv_gen_null.c \
 crypto/xofs/xof.c crypto/xofs/xof_bitspender.c \
@@ -123,9 +124,7 @@ LOCAL_SRC_FILES += $(call add_plugin, x509)
 
 LOCAL_SRC_FILES += $(call add_plugin, xcbc)
 
-LOCAL_SRC_FILES += $(call add_plugin, chapoly)
 LOCAL_SRC_FILES += $(call add_plugin, mgf1)
-
 LOCAL_SRC_FILES += $(call add_plugin, newhope)
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/math/libnttfft
 LOCAL_SRC_FILES +=  math/libnttfft/ntt_fft_params.c
