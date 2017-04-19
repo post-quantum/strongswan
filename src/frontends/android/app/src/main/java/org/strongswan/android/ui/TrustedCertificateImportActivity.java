@@ -29,7 +29,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.AppCompatDialogFragment;
 import android.widget.Toast;
 
-import org.strongswan.android.R;
+import net.postquantum.vpn.R;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.TrustedCertificateManager;
 

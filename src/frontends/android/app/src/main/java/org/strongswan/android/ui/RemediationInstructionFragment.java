@@ -24,7 +24,7 @@ import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import org.strongswan.android.R;
+import net.postquantum.vpn.R;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 
 public class RemediationInstructionFragment extends ListFragment

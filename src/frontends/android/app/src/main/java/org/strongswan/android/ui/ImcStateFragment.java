@@ -37,7 +37,7 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import org.strongswan.android.R;
+import net.postquantum.vpn.R;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.VpnStateListener;
 import org.strongswan.android.logic.imc.ImcState;

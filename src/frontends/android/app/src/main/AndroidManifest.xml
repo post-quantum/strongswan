@@ -16,20 +16,20 @@
     for more details.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.strongswan.android">
+    package="net.postquantum.vpn">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
-        android:name=".logic.StrongSwanApplication"
+        android:name="org.strongswan.android.logic.StrongSwanApplication"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/ApplicationTheme"
         android:allowBackup="false" >
         <activity
-            android:name=".ui.MainActivity"
+            android:name="org.strongswan.android.ui.MainActivity"
             android:label="@string/main_activity_name"
             android:launchMode="singleTop" >
             <intent-filter>
@@ -42,22 +42,22 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.VpnProfileDetailActivity" >
+            android:name="org.strongswan.android.ui.VpnProfileDetailActivity" >
         </activity>
         <activity
-            android:name=".ui.TrustedCertificatesActivity"
+            android:name="org.strongswan.android.ui.TrustedCertificatesActivity"
             android:label="@string/trusted_certs_title" >
         </activity>
         <activity
-            android:name=".ui.LogActivity"
+            android:name="org.strongswan.android.ui.LogActivity"
             android:label="@string/log_title" >
         </activity>
         <activity
-            android:name=".ui.RemediationInstructionsActivity"
+            android:name="org.strongswan.android.ui.RemediationInstructionsActivity"
             android:label="@string/remediation_instructions_title" >
         </activity>
         <activity
-            android:name=".ui.VpnProfileSelectActivity"
+            android:name="org.strongswan.android.ui.VpnProfileSelectActivity"
             android:label="@string/strongswan_shortcut" >
             <intent-filter>
                 <action android:name="android.intent.action.CREATE_SHORTCUT" />
@@ -65,7 +65,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.VpnProfileImportActivity"
+            android:name="org.strongswan.android.ui.VpnProfileImportActivity"
             android:label="@string/profile_import"
             android:taskAffinity=""
             android:excludeFromRecents="true" >
@@ -95,7 +95,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.TrustedCertificateImportActivity"
+            android:name="org.strongswan.android.ui.TrustedCertificateImportActivity"
             android:label="@string/import_certificate"
             android:theme="@style/AlertDialogTheme" >
             <intent-filter>
@@ -109,11 +109,11 @@
         </activity>
 
         <service
-            android:name=".logic.VpnStateService"
+            android:name="org.strongswan.android.logic.VpnStateService"
             android:exported="false" >
         </service>
         <service
-            android:name=".logic.CharonVpnService"
+            android:name="org.strongswan.android.logic.CharonVpnService"
             android:exported="false"
             android:permission="android.permission.BIND_VPN_SERVICE" >
             <intent-filter>
@@ -122,7 +122,7 @@
         </service>
 
         <provider
-            android:name=".data.LogContentProvider"
+            android:name="org.strongswan.android.data.LogContentProvider"
             android:authorities="org.strongswan.android.content.log"
             android:exported="true" >
             <!-- android:grantUriPermissions="true" combined with a custom permission does

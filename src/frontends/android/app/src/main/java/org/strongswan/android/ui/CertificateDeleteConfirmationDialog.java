@@ -22,7 +22,8 @@ import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatDialogFragment;
 
-import org.strongswan.android.R;
+import net.postquantum.vpn.R;
+
 
 /**
  * Class that displays a confirmation dialog to delete a selected local

@@ -335,7 +335,7 @@ public class VpnProfileDataSource
 		values.put(KEY_UUID, profile.getUUID() != null ? profile.getUUID().toString() : null);
 		values.put(KEY_NAME, profile.getName());
 		values.put(KEY_GATEWAY, profile.getGateway());
-		values.put(KEY_VPN_TYPE, profile.getVpnType().getIdentifier());
+		values.put(KEY_VPN_TYPE, "psk");//profile.getVpnType().getIdentifier());
 		values.put(KEY_USERNAME, profile.getUsername());
 		values.put(KEY_PASSWORD, profile.getPassword());
 		values.put(KEY_CERTIFICATE, profile.getCertificateAlias());
