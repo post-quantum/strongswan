@@ -1,0 +1,14 @@
+#!/bin/sh -e
+
+# Source debconf library.
+. /usr/share/debconf/confmodule
+
+db_get pqstrongswan/psk
+sed -i "s/##YOUR_PSK##/$RET/g" /etc/ipsec.secrets
+
+db_get pqstrongswan/ip
+sed -i "s/##LOCAL_IP##/$RET/g" /etc/ipsec.conf
+
+db_reset pqstrongswan/psk
+db_reset pqstrongswan/ip
+

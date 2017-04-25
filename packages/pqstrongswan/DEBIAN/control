@@ -1,0 +1,8 @@
+Package: pqstrongswan
+Version: 0.1-1
+Section: base
+Priority: optional
+Architecture: amd64
+Depends: 
+Maintainer: rs@post-quantum.com
+Description: PQ's fork of StrongSwan which adds support for quantum-safe key exchange.

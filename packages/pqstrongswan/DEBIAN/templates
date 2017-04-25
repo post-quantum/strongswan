@@ -1,0 +1,13 @@
+Template: pqstrongswan/psk
+Type: string
+Description: Enter a pre-shared key (PSK):
+ The pre-shared key is used by clients to authenticate themselves to the server.
+ It can be later edited in /etc/ipsec.secrets
+
+Template: pqstrongswan/ip
+Type: select
+Choices: ${ipaddrs}
+Description: Choose which IP address to use:
+ This machine has multiple network interfaces, pick one to use
+ for your PQStrongSwan VPN. This can be later edited in /etc/ipsec.conf
+
