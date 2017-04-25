@@ -9,6 +9,13 @@ sed -i "s/##YOUR_PSK##/$RET/g" /etc/ipsec.secrets
 db_get pqstrongswan/ip
 sed -i "s/##LOCAL_IP##/$RET/g" /etc/ipsec.conf
 
+db_get pqstrongswan/remotehost
+if [ -n $RET ] ;then
+printf "\nconn net-net\n\tright=$RET\n" >> /etc/ipsec.conf
+fi
+
 db_reset pqstrongswan/psk
 db_reset pqstrongswan/ip
+db_reset pqstrongswan/remotehost
+
 

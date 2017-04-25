@@ -1,4 +1,4 @@
-VER=0.1-3
+VER=0.2
 
 # Ensure working directory is where this script is
 SCRIPT=$(readlink -f "$0")

@@ -11,3 +11,11 @@ Description: Choose which IP address to use:
  This machine has multiple network interfaces, pick one to use
  for your PQStrongSwan VPN. This can be later edited in /etc/ipsec.conf
 
+Template: pqstrongswan/remotehost
+Type: string
+Description: IP address of remote host (optional):
+ Specifies the IP address of the remote end of a secure host-host 
+ tunnel, i.e. another instance of pqstrongswan running elsewhere.
+ .
+ Leave this blank if you do not want a host-host tunnel.
+

@@ -15,6 +15,10 @@ else
 db_set pqstrongswan/ip $ipaddrs || true
 fi
 
+# Remote host
+db_input high pqstrongswan/remotehost ||true
+db_go || true
+
 # PSK
 db_input high pqstrongswan/psk || true
 db_go || true
