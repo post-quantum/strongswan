@@ -1,0 +1,1 @@
+--disable-ikev1 --enable-ha --enable-sha3 --enable-md5 --enable-newhope --enable-ntru --enable-ntruprime --enable-bliss --enable-openssl --enable-chapoly --enable-hybrid-quantum-safe

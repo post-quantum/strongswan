@@ -14,14 +14,9 @@ db_go || true
 else
 db_set pqstrongswan/ip $ipaddrs || true
 fi
-echo $ipaddrs
-
 
 # PSK
 db_input high pqstrongswan/psk || true
 db_go || true
-
-
-
 
 
