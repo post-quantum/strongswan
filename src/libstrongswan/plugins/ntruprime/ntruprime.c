@@ -10,11 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ntru_prime.h"
-#include "ntru_prime_math_utils.h"
-#include "ntru_prime_z_polynomial.h"
-#include "ntru_prime_fisher_yates_shuffle.h"
-#include "ntru_prime_pq_random.h"
+#include "ntruprime.h"
+#include "ntruprime_math_utils.h"
+#include "ntruprime_z_polynomial.h"
+#include "ntruprime_fisher_yates_shuffle.h"
+#include "ntruprime_pq_random.h"
 
 #include <library.h>
 

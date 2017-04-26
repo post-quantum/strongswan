@@ -622,9 +622,9 @@ endif
 endif
 
 if USE_NTRUPRIME
-  SUBDIRS += plugins/ntru_prime
+  SUBDIRS += plugins/ntruprime
 if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/ntru_prime/libstrongswan-ntru_prime.la
+  libstrongswan_la_LIBADD += plugins/ntruprime/libstrongswan-ntruprime.la
 endif
 endif
 

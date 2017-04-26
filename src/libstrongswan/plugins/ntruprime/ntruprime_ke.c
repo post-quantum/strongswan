@@ -13,9 +13,9 @@
  * for more details.
  */
 
-#include "ntru_prime.h"
-#include "ntru_prime_ke.h"
-#include "ntru_prime_pq_random.h"
+#include "ntruprime.h"
+#include "ntruprime_ke.h"
+#include "ntruprime_pq_random.h"
 
 #include <crypto/diffie_hellman.h>
 #include <utils/debug.h>

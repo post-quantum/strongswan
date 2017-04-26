@@ -8,14 +8,14 @@ strongswan_USE_BYOD := true
 strongswan_CHARON_PLUGINS := android-log openssl fips-prf random nonce pubkey \
 	chapoly curve25519 pkcs1 pkcs8 pem xcbc hmac socket-default \
 	eap-identity eap-mschapv2 eap-md5 eap-gtc eap-tls \
-	sha3 mgf1 newhope ntru ntru_prime
+	sha3 mgf1 newhope ntru ntruprime
 
 ifneq ($(strongswan_USE_BYOD),)
-strongswan_BYOD_PLUGINS := eap-ttls eap-tnc tnc-imc tnc-tnccs tnccs-20 sha3 chapoly mgf1 newhope ntru ntru_prime
+strongswan_BYOD_PLUGINS := eap-ttls eap-tnc tnc-imc tnc-tnccs tnccs-20 sha3 chapoly mgf1 newhope ntru ntruprime
 endif
 
 strongswan_PLUGINS := $(strongswan_CHARON_PLUGINS) \
-	$(strongswan_BYOD_PLUGINS) sha3 mgf1 newhope ntru ntru_prime
+	$(strongswan_BYOD_PLUGINS) sha3 mgf1 newhope ntru ntruprime
 
 strongswan_DIR := ../../../../../../../
 

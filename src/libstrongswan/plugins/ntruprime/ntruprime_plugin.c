@@ -13,9 +13,9 @@
  * for more details.
  */
 
-#include "ntru_prime_plugin.h"
-#include "ntru_prime_ke.h"
-#include "ntru_prime_qske.h"
+#include "ntruprime_plugin.h"
+#include "ntruprime_ke.h"
+#include "ntruprime_qske.h"
 
 #include <library.h>
 
@@ -35,7 +35,7 @@ struct private_ntru_prime_plugin_t {
 METHOD(plugin_t, get_name, char*,
 	private_ntru_prime_plugin_t *this)
 {
-	return "ntru_prime";
+	return "ntruprime";
 }
 
 METHOD(plugin_t, get_features, int,

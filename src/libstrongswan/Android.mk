@@ -131,7 +131,7 @@ LOCAL_SRC_FILES +=  math/libnttfft/ntt_fft_params.c
 LOCAL_SRC_FILES +=  math/libnttfft/ntt_fft.c
 #LOCAL_STATIC_LIBRARIES += libnttfft
 LOCAL_SRC_FILES += $(call add_plugin, ntru)
-LOCAL_SRC_FILES += $(call add_plugin, ntru_prime)
+LOCAL_SRC_FILES += $(call add_plugin, ntruprime)
 
 # build libstrongswan ----------------------------------------------------------
 

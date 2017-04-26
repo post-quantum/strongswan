@@ -14,9 +14,9 @@
  */
 #ifdef QSKE
 
-#include "ntru_prime.h"
-#include "ntru_prime_qske.h"
-#include "ntru_prime_pq_random.h"
+#include "ntruprime.h"
+#include "ntruprime_qske.h"
+#include "ntruprime_pq_random.h"
 
 #include <crypto/quantum_safe.h>
 #include <utils/debug.h>

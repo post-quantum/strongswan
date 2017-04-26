@@ -247,7 +247,7 @@ LOCAL_SRC_FILES += $(call add_plugin, chapoly)
 LOCAL_SRC_FILES += $(call add_plugin, mgf1)
 LOCAL_SRC_FILES += $(call add_plugin, newhope)
 LOCAL_SRC_FILES += $(call add_plugin, ntru)
-LOCAL_SRC_FILES += $(call add_plugin, ntru_prime)
+LOCAL_SRC_FILES += $(call add_plugin, ntruprime)
 
 # build libcharon --------------------------------------------------------------
 

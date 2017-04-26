@@ -9,10 +9,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ntru_prime_z_polynomial.h"
-#include "ntru_prime_pq_random.h"
-#include "ntru_prime_fisher_yates_shuffle.h"
-#include "ntru_prime_math_utils.h"
+#include "ntruprime_z_polynomial.h"
+#include "ntruprime_pq_random.h"
+#include "ntruprime_fisher_yates_shuffle.h"
+#include "ntruprime_math_utils.h"
 
 #define COPY_POLY(a, b)  (b)->degree = (a)->degree; (b)->mod = (a)->mod; \
                          memcpy((b)->coeff, (a)->coeff, (a)->size*sizeof(coeff_t))

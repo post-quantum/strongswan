@@ -7,7 +7,7 @@
  **/
 
 #include <stdlib.h>
-#include "ntru_prime_math_utils.h"
+#include "ntruprime_math_utils.h"
 
 #define DEFAULT_PRIME_DECOMPOSITION_BUFFER_SIZE 8192
 

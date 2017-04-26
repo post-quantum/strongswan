@@ -1,5 +1,5 @@
 #include <library.h>
-#include "ntru_prime_pq_random.h"
+#include "ntruprime_pq_random.h"
 
 #define PQ_RAND_RESEED_BUFFER_SIZE      8192
 #define PQ_RAND_RESEED_INTERVAL_BYTES   (1UL << 32)

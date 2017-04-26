@@ -1,4 +1,4 @@
-#include "ntru_prime_pq_random.h"
+#include "ntruprime_pq_random.h"
 
 void fisher_yates_shuffle(uint32_t *buffer, size_t buffer_size)
 {
