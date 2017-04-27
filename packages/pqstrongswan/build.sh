@@ -1,4 +1,4 @@
-VER=0.2
+VER=`cat pqversion`
 
 # Ensure working directory is where this script is
 SCRIPT=$(readlink -f "$0")
