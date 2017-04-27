@@ -233,6 +233,25 @@ METHOD(proposal_t, get_qs_group, quantum_safe_group_t,  private_proposal_t *this
 	return found ? current : QS_NONE;
 }
 
+
+METHOD(proposal_t, strip_qs, void,
+	private_proposal_t *this, quantum_safe_group_t keep)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+
+	enumerator = array_create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->type == QUANTUM_SAFE_GROUP &&
+			entry->alg != keep)
+		{
+			array_remove_at(this->transforms, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 #endif
 
 
@@ -773,6 +792,7 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 #ifdef QSKE
 			.has_qs_group = _has_qs_group,
 			.get_qs_group = _get_qs_group,
+			.strip_qs = _strip_qs,
 #endif
 			.select = _select_proposal,
 			.get_protocol = _get_protocol,

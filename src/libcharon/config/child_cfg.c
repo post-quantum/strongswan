@@ -198,6 +198,9 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 		if (strip_dh)
 		{
 			current->strip_dh(current, MODP_NONE);
+#ifdef QSKE
+			current->strip_qs(current, QS_NONE);
+#endif
 		}
 		if (proposals->find_first(proposals, (linked_list_match_t)match_proposal,
 								  NULL, current) == SUCCESS)
@@ -248,6 +251,9 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 			if (strip_dh)
 			{
 				proposal->strip_dh(proposal, MODP_NONE);
+#ifdef QSKE
+				proposal->strip_qs(proposal, QS_NONE);
+#endif
 			}
 			selected = proposal->select(proposal, match, prefer_self, private);
 			if (selected)

@@ -128,6 +128,13 @@ struct proposal_t {
 
 	quantum_safe_group_t (*get_qs_group) (proposal_t *this);
 
+	/**
+	 * Strip QS groups from proposal to use it without PFS.
+	 *
+	 * @param keep			group to keep (QS_NONE to remove all)
+	 */
+	void (*strip_qs)(proposal_t *this, quantum_safe_group_t keep);
+
 #endif
 
 	/**
