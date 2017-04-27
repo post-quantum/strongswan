@@ -1,5 +1,5 @@
 /**
- *  ntru_prime.h
+ *  ntruprime.h
  *  ntrup
  *
  *  Created by CJ Tjhai on 06/02/2017.
@@ -29,39 +29,39 @@ typedef struct {
     size_t public_key_size;
     size_t private_key_size;
     void *priv;
-} ntru_prime;
+} ntruprime;
 
 /**
  *  Initialises NTRU prime with parameters p = 547,
  *  q = 3001 and t = 62. This set of parameters is
  *  believed to give 129-bit of security.
  *
- *  @return a pointer to ntru_prime data structure on success,
+ *  @return a pointer to ntruprime data structure on success,
  *          NULL otherwise
  **/
-ntru_prime* init_ntru_prime();
+ntruprime* init_ntruprime();
 
 /**
  *  Deallocate NTRU prime object
  *
- *  @param[in] ntrup a pointer to ntru_prime object
+ *  @param[in] ntrup a pointer to ntruprime object
  **/
-void free_ntru_prime(ntru_prime *ntrup);
+void free_ntruprime(ntruprime *ntrup);
 
 /**
  *  Returns the size of NTRU prime KEM key in bytes
  *
  *  @return the key size in bytes
  **/
-int ntru_prime_kem_key_size();
+int ntruprime_kem_key_size();
 
 /**
  *  Returns the size of NTRU prime ciphertext in bytes
  *
- *  @param[in] ntrup a pointer to ntru_prime object
+ *  @param[in] ntrup a pointer to ntruprime object
  *  @return the ciphertext size in bytes
  **/
-int ntru_prime_ciphertext_size(const ntru_prime *ntrup);
+int ntruprime_ciphertext_size(const ntruprime *ntrup);
 
 /**
  *  Returns the size of NTRU prime ciphertext in bytes
@@ -71,7 +71,7 @@ int ntru_prime_ciphertext_size(const ntru_prime *ntrup);
  *  @param[in] public_key_size  The size of the public-key buffer
  *  @return the ciphertext size in bytes
  **/
-int ntru_prime_ciphertext_size_from_public_key(const uint8_t *public_key,
+int ntruprime_ciphertext_size_from_public_key(const uint8_t *public_key,
                                                size_t public_key_size);
 /**
  *  Performs KEM encapsulation with NTRU prime
@@ -82,7 +82,7 @@ int ntru_prime_ciphertext_size_from_public_key(const uint8_t *public_key,
  *  @param[out] key             The pointer to the KEM key
  *  @return 1 on success, 0 otherwise
  **/
-int ntru_prime_encapsulate(const uint8_t *public_key,
+int ntruprime_encapsulate(const uint8_t *public_key,
                            size_t public_key_size,
                            uint8_t *ciphertext,
                            uint8_t *key);
@@ -96,7 +96,7 @@ int ntru_prime_encapsulate(const uint8_t *public_key,
  *  @param[out] key              The pointer to the KEM key
  *  @return 1 on success, 0 otherwise
  **/
-int ntru_prime_decapsulate(const uint8_t *private_key,
+int ntruprime_decapsulate(const uint8_t *private_key,
                            size_t private_key_size,
                            const uint8_t *ciphertext,
                            uint8_t *key);

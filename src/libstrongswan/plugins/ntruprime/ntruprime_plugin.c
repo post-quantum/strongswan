@@ -19,34 +19,34 @@
 
 #include <library.h>
 
-typedef struct private_ntru_prime_plugin_t private_ntru_prime_plugin_t;
+typedef struct private_ntruprime_plugin_t private_ntruprime_plugin_t;
 
 /**
- * private data of ntru_prime_plugin
+ * private data of ntruprime_plugin
  */
-struct private_ntru_prime_plugin_t {
+struct private_ntruprime_plugin_t {
 
 	/**
 	 * public functions
 	 */
-	ntru_prime_plugin_t public;
+	ntruprime_plugin_t public;
 };
 
 METHOD(plugin_t, get_name, char*,
-	private_ntru_prime_plugin_t *this)
+	private_ntruprime_plugin_t *this)
 {
 	return "ntruprime";
 }
 
 METHOD(plugin_t, get_features, int,
-	private_ntru_prime_plugin_t *this, plugin_feature_t *features[])
+	private_ntruprime_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_REGISTER(DH, ntru_prime_ke_create),
+		PLUGIN_REGISTER(DH, ntruprime_ke_create),
 			PLUGIN_PROVIDE(DH, NTRU_PRIME_129_BIT),
 				PLUGIN_DEPENDS(HASHER, HASH_SHA512),
 #ifdef QSKE
-		PLUGIN_REGISTER(QS, ntru_prime_qske_create),
+		PLUGIN_REGISTER(QS, ntruprime_qske_create),
 			PLUGIN_PROVIDE(QS, QS_NTRU_PRIME_129_BIT),
 				PLUGIN_DEPENDS(HASHER, HASH_SHA512),
 #endif
@@ -57,7 +57,7 @@ METHOD(plugin_t, get_features, int,
 }
 
 METHOD(plugin_t, destroy, void,
-	private_ntru_prime_plugin_t *this)
+	private_ntruprime_plugin_t *this)
 {
 	free(this);
 }
@@ -65,9 +65,9 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *ntru_prime_plugin_create()
+plugin_t *ntruprime_plugin_create()
 {
-	private_ntru_prime_plugin_t *this;
+	private_ntruprime_plugin_t *this;
 
 	INIT(this,
 		.public = {

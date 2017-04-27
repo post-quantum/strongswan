@@ -1,5 +1,5 @@
 /**
- *  ntru_prime.c
+ *  ntruprime.c
  *  ntrup
  *
  *  Created by CJ Tjhai on 06/02/2017.
@@ -25,39 +25,39 @@
 typedef struct {
     z_poly *hx;         /* Public-key */
     z_poly *fx, *igx;   /* Private-key */
-} ntru_prime_priv;
+} ntruprime_priv;
 
 static const int kNTRUPrimeKEMKeysize = 32;
 
 /* Private methods */
 void digest(const uint8_t* buffer, size_t buffer_size, uint8_t *hash);
 coeff_t *create_random_vector(int size, int weight, const coeff_t *c, int c_size);
-uint8_t *serialise_public_key(const ntru_prime *ntrup, size_t *public_key_size);
-ntru_prime *deserialise_public_key(const uint8_t *public_key, size_t public_key_size);
-uint8_t *serialise_private_key(const ntru_prime *ntrup, size_t *private_key_size);
-ntru_prime *deserialise_private_key(const uint8_t *private_key, size_t private_key_size);
+uint8_t *serialise_public_key(const ntruprime *ntrup, size_t *public_key_size);
+ntruprime *deserialise_public_key(const uint8_t *public_key, size_t public_key_size);
+uint8_t *serialise_private_key(const ntruprime *ntrup, size_t *private_key_size);
+ntruprime *deserialise_private_key(const uint8_t *private_key, size_t private_key_size);
 
-ntru_prime* init_ntru_prime()
+ntruprime* init_ntruprime()
 {
     int i;
     z_poly *mx3, *mxq;
     z_poly *fxq, *ifxq;
     z_poly *gx, *gxq;
-    ntru_prime* ntrup;
+    ntruprime* ntrup;
     coeff_t *fq = NULL, *g = NULL;
     const coeff_t fq_coeff[] = { 0, 3, NTRU_PRIME_Q-3 };
     const coeff_t g_coeff[] = { 0, 1, 2 };
-    ntru_prime_priv *priv = NULL;
+    ntruprime_priv *priv = NULL;
 
-    ntrup = (ntru_prime *)malloc(sizeof(ntru_prime));
+    ntrup = (ntruprime *)malloc(sizeof(ntruprime));
     ntrup->p = NTRU_PRIME_P;
     ntrup->q = NTRU_PRIME_Q;
     ntrup->t = NTRU_PRIME_T;
 
-    ntrup->priv = malloc(sizeof(ntru_prime_priv));
+    ntrup->priv = malloc(sizeof(ntruprime_priv));
     if (!ntrup->priv)
         return NULL;
-    priv = (ntru_prime_priv *)ntrup->priv;
+    priv = (ntruprime_priv *)ntrup->priv;
     priv->fx = priv->hx = priv->igx = NULL;
 
     mx3 = init_poly(ntrup->p+1, 3);
@@ -133,13 +133,13 @@ ntru_prime* init_ntru_prime()
     return ntrup;
 }
 
-void free_ntru_prime(ntru_prime *ntrup)
+void free_ntruprime(ntruprime *ntrup)
 {
-    ntru_prime_priv *priv;
+    ntruprime_priv *priv;
 
     if (ntrup) {
         if (ntrup->priv) {
-            priv = (ntru_prime_priv *)ntrup->priv;
+            priv = (ntruprime_priv *)ntrup->priv;
             if (priv->fx) {
                 zero_poly(priv->fx);
                 free_poly(priv->fx);
@@ -172,12 +172,12 @@ void free_ntru_prime(ntru_prime *ntrup)
     }
 }
 
-int ntru_prime_kem_key_size()
+int ntruprime_kem_key_size()
 {
     return kNTRUPrimeKEMKeysize;
 }
 
-int ntru_prime_ciphertext_size(const ntru_prime *ntrup)
+int ntruprime_ciphertext_size(const ntruprime *ntrup)
 {
     /**
      * Q is 3001 and each coefficient of c up to this point
@@ -188,23 +188,23 @@ int ntru_prime_ciphertext_size(const ntru_prime *ntrup)
     return kNTRUPrimeKEMKeysize + (4*(ntrup->p + 2)/3);
 }
 
-int ntru_prime_ciphertext_size_from_public_key(const uint8_t *public_key,
+int ntruprime_ciphertext_size_from_public_key(const uint8_t *public_key,
                                                size_t public_key_size)
 {
     int size = 0;
-    ntru_prime *ntrup = NULL;
+    ntruprime *ntrup = NULL;
 
     ntrup = deserialise_public_key(public_key, public_key_size);
     if (ntrup) {
-        size = ntru_prime_ciphertext_size(ntrup);
+        size = ntruprime_ciphertext_size(ntrup);
         
-        free_ntru_prime(ntrup);
+        free_ntruprime(ntrup);
     }
 
     return size;
 }
 
-int ntru_prime_encapsulate(const uint8_t *public_key,
+int ntruprime_encapsulate(const uint8_t *public_key,
                            size_t public_key_size,
                            uint8_t *ciphertext,
                            uint8_t *key)
@@ -217,8 +217,8 @@ int ntru_prime_encapsulate(const uint8_t *public_key,
     uint32_t c_packed_value;
     coeff_t q2, q6, i3, *c;
     z_poly *mx, *rx, *hrx;
-    ntru_prime *ntrup = NULL;
-    ntru_prime_priv *priv = NULL;
+    ntruprime *ntrup = NULL;
+    ntruprime_priv *priv = NULL;
     const coeff_t c_coeff[] = { 0, 1, -1 };
     coeff_t *r;
 
@@ -226,7 +226,7 @@ int ntru_prime_encapsulate(const uint8_t *public_key,
     if (!ntrup)
         return 0;
     if (ntrup->priv)
-        priv = (ntru_prime_priv *)ntrup->priv;
+        priv = (ntruprime_priv *)ntrup->priv;
 
     /* Generate a uniform random t-small element */
     r = create_random_vector(ntrup->p, 2*ntrup->t, c_coeff, sizeof(c_coeff)/sizeof(coeff_t));
@@ -272,7 +272,7 @@ int ntru_prime_encapsulate(const uint8_t *public_key,
 
     digest(r_buf, r_buf_size, hash);
 
-    memcpy(key, &hash[32], ntru_prime_kem_key_size());
+    memcpy(key, &hash[32], ntruprime_kem_key_size());
 
     /**
      * Note: The polynomial c(x) is obtained as follows
@@ -324,7 +324,7 @@ int ntru_prime_encapsulate(const uint8_t *public_key,
     memset(c, 0, ntrup->p);
     memset(r, 0, ntrup->p*sizeof(coeff_t));
 
-    free_ntru_prime(ntrup);
+    free_ntruprime(ntrup);
     zero_poly(hrx); free_poly(hrx);
     zero_poly(rx); free_poly(rx);
     free_poly(mx);
@@ -336,7 +336,7 @@ int ntru_prime_encapsulate(const uint8_t *public_key,
     return 1;
 }
 
-int ntru_prime_decapsulate(const uint8_t *private_key,
+int ntruprime_decapsulate(const uint8_t *private_key,
                            size_t private_key_size,
                            const uint8_t *ciphertext,
                            uint8_t *key)
@@ -352,14 +352,14 @@ int ntru_prime_decapsulate(const uint8_t *private_key,
     int32_t *m, status = 0, weight_rx = 0;
     z_poly *cx, *mx, *rx;
     z_poly *hrx, *ccx, *fcx;
-    ntru_prime *ntrup = NULL;
-    ntru_prime_priv *priv = NULL;
+    ntruprime *ntrup = NULL;
+    ntruprime_priv *priv = NULL;
 
     ntrup = deserialise_private_key(private_key, private_key_size);
     if (!ntrup)
         return 0;
     if (ntrup && ntrup->priv)
-        priv = (ntru_prime_priv *)ntrup->priv;
+        priv = (ntruprime_priv *)ntrup->priv;
 
     cx = init_poly(ntrup->p, ntrup->q);
     if (!cx)
@@ -377,7 +377,7 @@ int ntru_prime_decapsulate(const uint8_t *private_key,
     /* Reconstruct c from the rest of the ciphertext */
     q2 = ntrup->q >> 1;
     q6 = (ntrup->q + 5) / 6;
-    for (i=0,j=0; i<ntru_prime_ciphertext_size(ntrup)-kNTRUPrimeKEMKeysize-4; i+=4, j+=3) {
+    for (i=0,j=0; i<ntruprime_ciphertext_size(ntrup)-kNTRUPrimeKEMKeysize-4; i+=4, j+=3) {
         v = 0;
         memcpy(&v, buf_ptr, 4);
         buf_ptr += 4;
@@ -513,7 +513,7 @@ int ntru_prime_decapsulate(const uint8_t *private_key,
     zero_poly(cx); free_poly(cx);
     zero_poly(mx); free_poly(mx);
     zero_poly(fcx); free_poly(fcx);
-    free_ntru_prime(ntrup);
+    free_ntruprime(ntrup);
     free(key_confirmation);
 
     return status;
@@ -627,15 +627,15 @@ coeff_t *decoded_coefficients(const uint8_t *ec, size_t encoded_size, size_t *c_
     return c;
 }
 
-uint8_t *serialise_public_key(const ntru_prime *ntrup, size_t *public_key_size)
+uint8_t *serialise_public_key(const ntruprime *ntrup, size_t *public_key_size)
 {
     size_t ec_size = 0;
-    ntru_prime_priv *priv = NULL;
+    ntruprime_priv *priv = NULL;
     uint8_t *ptr, *pk_buffer = NULL;
     uint8_t *hx_coeff = NULL;
 
     if (ntrup && ntrup->priv)
-        priv = (ntru_prime_priv *)ntrup->priv;
+        priv = (ntruprime_priv *)ntrup->priv;
 
     /**
      * Each coefficient is less than NTRU_PRIME_Q, therefore we could take
@@ -663,21 +663,21 @@ uint8_t *serialise_public_key(const ntru_prime *ntrup, size_t *public_key_size)
     return pk_buffer;
 }
 
-ntru_prime *deserialise_public_key(const uint8_t *public_key, size_t public_key_size)
+ntruprime *deserialise_public_key(const uint8_t *public_key, size_t public_key_size)
 {
     const int m = 2, n = 3;
-    ntru_prime *ntrup = NULL;
-    ntru_prime_priv *priv = NULL;
+    ntruprime *ntrup = NULL;
+    ntruprime_priv *priv = NULL;
     const uint8_t *ptr = public_key;
     size_t coeff_size, size;
 
-    ntrup = (ntru_prime *)malloc(sizeof(ntru_prime));
+    ntrup = (ntruprime *)malloc(sizeof(ntruprime));
     if (!ntrup)
         return NULL;
-    ntrup->priv = malloc(sizeof(ntru_prime_priv));
+    ntrup->priv = malloc(sizeof(ntruprime_priv));
     if (!ntrup->priv)
         return NULL;
-    priv = (ntru_prime_priv *)ntrup->priv;
+    priv = (ntruprime_priv *)ntrup->priv;
     ntrup->private_key = ntrup->public_key = NULL;
     priv->fx = priv->hx = priv->igx = NULL;
 
@@ -705,15 +705,15 @@ ntru_prime *deserialise_public_key(const uint8_t *public_key, size_t public_key_
     return ntrup;
 }
 
-uint8_t *serialise_private_key(const ntru_prime *ntrup, size_t *private_key_size)
+uint8_t *serialise_private_key(const ntruprime *ntrup, size_t *private_key_size)
 {
     uint8_t *ptr, *sk_buffer = NULL;
-    ntru_prime_priv *priv = NULL;
+    ntruprime_priv *priv = NULL;
     uint8_t *ec_fx_buf, *ec_igx_buf, *ec_hx_buf;
     size_t ec_fx_size, ec_igx_size, ec_hx_size;
 
     if (ntrup && ntrup->priv)
-        priv = (ntru_prime_priv *)ntrup->priv;
+        priv = (ntruprime_priv *)ntrup->priv;
 
     if (!priv || !priv->fx || !priv->igx || !priv->hx)
         return NULL;
@@ -753,21 +753,21 @@ uint8_t *serialise_private_key(const ntru_prime *ntrup, size_t *private_key_size
     return sk_buffer;
 }
 
-ntru_prime *deserialise_private_key(const uint8_t *private_key, size_t private_key_size)
+ntruprime *deserialise_private_key(const uint8_t *private_key, size_t private_key_size)
 {
     const int m = 2, n = 3;
     size_t size, igx_size;
-    ntru_prime *ntrup = NULL;
-    ntru_prime_priv *priv = NULL;
+    ntruprime *ntrup = NULL;
+    ntruprime_priv *priv = NULL;
     const uint8_t *ptr = private_key;
 
-    ntrup = (ntru_prime *)malloc(sizeof(ntru_prime));
+    ntrup = (ntruprime *)malloc(sizeof(ntruprime));
     if (!ntrup)
         return NULL;
-    ntrup->priv = malloc(sizeof(ntru_prime_priv));
+    ntrup->priv = malloc(sizeof(ntruprime_priv));
     if (!ntrup->priv)
         return NULL;
-    priv = (ntru_prime_priv *)ntrup->priv;
+    priv = (ntruprime_priv *)ntrup->priv;
     ntrup->private_key = ntrup->public_key = NULL;
     priv->fx = priv->hx = priv->igx = NULL;
 

@@ -14,24 +14,24 @@
  */
 
 /**
- * @defgroup ntru_prime_p ntru_prime
+ * @defgroup ntruprime_p ntruprime
  * @ingroup plugins
  *
- * @defgroup ntru_prime_plugin ntru_prime_plugin
- * @{ @ingroup ntru_prime_p
+ * @defgroup ntruprime_plugin ntruprime_plugin
+ * @{ @ingroup ntruprime_p
  */
 
-#ifndef NTRU_PRIME_PLUGIN_H_
-#define NTRU_PRIME_PLUGIN_H_
+#ifndef NTRUPRIME_PLUGIN_H_
+#define NTRUPRIME_PLUGIN_H_
 
 #include <plugins/plugin.h>
 
-typedef struct ntru_prime_plugin_t ntru_prime_plugin_t;
+typedef struct ntruprime_plugin_t ntruprime_plugin_t;
 
 /**
  * Plugin implementing NTRU-Prime-base key exchange
  */
-struct ntru_prime_plugin_t {
+struct ntruprime_plugin_t {
 
 	/**
 	 * implements plugin interface
@@ -39,4 +39,4 @@ struct ntru_prime_plugin_t {
 	plugin_t plugin;
 };
 
-#endif /** NTRU_PRIME_PLUGIN_H_ @}*/
+#endif /** NTRUPRIME_PLUGIN_H_ @}*/

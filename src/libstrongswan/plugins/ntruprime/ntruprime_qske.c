@@ -21,18 +21,18 @@
 #include <crypto/quantum_safe.h>
 #include <utils/debug.h>
 
-#define METHOD_KE(name, ret, ...) METHOD(quantum_safe_t, name, ret, private_ntru_prime_qske_t *this, ##__VA_ARGS__)
+#define METHOD_KE(name, ret, ...) METHOD(quantum_safe_t, name, ret, private_ntruprime_qske_t *this, ##__VA_ARGS__)
 
-typedef struct private_ntru_prime_qske_t private_ntru_prime_qske_t;
+typedef struct private_ntruprime_qske_t private_ntruprime_qske_t;
 
  /**
- * Private data of an ntru_prime_ke_t object.
+ * Private data of an ntruprime_ke_t object.
  */
-struct private_ntru_prime_qske_t {
+struct private_ntruprime_qske_t {
 	/**
-	 * Public ntru_prime_qske_t interface.
+	 * Public ntruprime_qske_t interface.
 	 */
-	ntru_prime_qske_t public;
+	ntruprime_qske_t public;
 
 	/**
 	 * QSKE group number.
@@ -82,7 +82,7 @@ struct private_ntru_prime_qske_t {
 
 METHOD_KE(get_my_public_value, bool, chunk_t *value)
 {
-    ntru_prime *ntru_prime = NULL;
+    ntruprime *ntruprime = NULL;
 	*value = chunk_empty;
 
 	if (this->responder)
@@ -98,18 +98,18 @@ METHOD_KE(get_my_public_value, bool, chunk_t *value)
 		if (!this->pubkey.ptr)
 		{
 			/* generate a random NTRU Prime public/private key pair */
-            ntru_prime = init_ntru_prime();
-            if (!ntru_prime)
+            ntruprime = init_ntruprime();
+            if (!ntruprime)
             {
                 DBG1(DBG_LIB, "NTRU prime keypair generation failed");
 				return FALSE;
             }
-            this->pubkey = chunk_clone(chunk_create(ntru_prime->public_key,
-                                        ntru_prime->public_key_size));
-            this->privkey = chunk_clone(chunk_create(ntru_prime->private_key,
-                                         ntru_prime->private_key_size));
-            this->ciphertext_size = ntru_prime_ciphertext_size(ntru_prime);
-            free_ntru_prime(ntru_prime);
+            this->pubkey = chunk_clone(chunk_create(ntruprime->public_key,
+                                        ntruprime->public_key_size));
+            this->privkey = chunk_clone(chunk_create(ntruprime->private_key,
+                                         ntruprime->private_key_size));
+            this->ciphertext_size = ntruprime_ciphertext_size(ntruprime);
+            free_ntruprime(ntruprime);
 		}
 		*value = chunk_clone(this->pubkey);
 		DBG3(DBG_LIB, "NTRU prime public key: %B", value);
@@ -142,8 +142,8 @@ METHOD_KE(set_other_public_value, bool, chunk_t value)
 		DBG3(DBG_LIB, "NTRU prime ciphertext: %B", &value);
 
 		/* decrypt the shared secret */
-        this->shared_secret = chunk_alloc(ntru_prime_kem_key_size());
-        if (!ntru_prime_decapsulate(this->privkey.ptr, this->privkey.len,
+        this->shared_secret = chunk_alloc(ntruprime_kem_key_size());
+        if (!ntruprime_decapsulate(this->privkey.ptr, this->privkey.len,
                                     value.ptr, this->shared_secret.ptr))
 		{
             chunk_clear(&this->shared_secret);
@@ -175,7 +175,7 @@ METHOD_KE(set_other_public_value, bool, chunk_t value)
         */
 
 		/* shared secret size is the same as NTRU prime KEM key size */
-		this->shared_secret = chunk_alloc(ntru_prime_kem_key_size());
+		this->shared_secret = chunk_alloc(ntruprime_kem_key_size());
 
 		/* generate the random shared secret */
         if (pq_rand_bytes(this->shared_secret.ptr,
@@ -188,12 +188,12 @@ METHOD_KE(set_other_public_value, bool, chunk_t value)
 		this->computed = TRUE;
 
         /* Allocate a buffer to contain our ciphertext */
-        this->ciphertext_size = ntru_prime_ciphertext_size_from_public_key(this->pubkey.ptr, this->pubkey.len);
+        this->ciphertext_size = ntruprime_ciphertext_size_from_public_key(this->pubkey.ptr, this->pubkey.len);
         this->ciphertext = chunk_alloc(this->ciphertext_size);
         DBG3(DBG_LIB, "NTRU prime ciphertext size: %u", this->ciphertext_size);
 
 		/* encrypt the shared secret */
-        if (!ntru_prime_encapsulate(this->pubkey.ptr,
+        if (!ntruprime_encapsulate(this->pubkey.ptr,
                                     this->pubkey.len,
                                     this->ciphertext.ptr,
                                     this->shared_secret.ptr))
@@ -225,8 +225,8 @@ METHOD_KE(destroy, void )
 /*
  * Described in header.
  */
-ntru_prime_qske_t* ntru_prime_qske_create(quantum_safe_group_t group, chunk_t g, chunk_t p) {
-	private_ntru_prime_qske_t *this;
+ntruprime_qske_t* ntruprime_qske_create(quantum_safe_group_t group, chunk_t g, chunk_t p) {
+	private_ntruprime_qske_t *this;
     const int strength = 129;
 
 	DBG1(DBG_LIB, "%u-bit NTRU prime", strength);
