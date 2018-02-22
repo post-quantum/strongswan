@@ -128,6 +128,46 @@ METHOD(proposal_t, create_enumerator, enumerator_t*,
 						alg_filter, (void*)(uintptr_t)type, NULL);
 }
 
+CALLBACK(unknown_transform_filter, bool,
+		uintptr_t unused, enumerator_t *orig, va_list args)
+{
+	entry_t *entry;
+	uint16_t *type, *alg, *key_size;
+
+	VA_ARGS_VGET(args, type, alg, key_size);
+
+	while (orig->enumerate(orig, &entry))
+	{
+		if ((entry->type >= ENCRYPTION_ALGORITHM) &&
+			(entry->type <= EXTENDED_SEQUENCE_NUMBERS))
+		{
+			continue;
+		}
+		if (type)
+		{
+			*type = entry->type;
+		}
+		if (alg)
+		{
+			*alg = entry->alg;
+		}
+		if (key_size)
+		{
+			*key_size = entry->key_size;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+static enumerator_t* create_unknown_transform_enumerator(
+		private_proposal_t *this)
+{
+	return enumerator_create_filter(
+						array_create_enumerator(this->transforms),
+						unknown_transform_filter, NULL, NULL);
+}
+
 METHOD(proposal_t, get_algorithm, bool,
 	private_proposal_t *this, transform_type_t type,
 	uint16_t *alg, uint16_t *key_size)
@@ -220,6 +260,27 @@ METHOD(proposal_t, strip_dh, void,
 }
 
 /**
+ * Return TRUE if the other proposal contains a transform type that is
+ * not supported or understood by this implementation
+ */
+static bool contain_unknown_transforms(proposal_t *other)
+{
+	bool found = FALSE;
+	uint16_t type, alg, size;
+	enumerator_t *enumerator;
+
+	enumerator = create_unknown_transform_enumerator(
+			(private_proposal_t *)other);
+	while (!found && enumerator->enumerate(enumerator, &type, &alg, &size))
+	{
+		found = TRUE;
+	}
+	enumerator->destroy(enumerator);
+
+	return found;
+}
+
+/**
  * Select a matching proposal from this and other, insert into selected.
  */
 static bool select_algo(private_proposal_t *this, proposal_t *other,
@@ -240,7 +301,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 	{
 		optional = this->protocol == PROTO_ESP || this->protocol == PROTO_AH;
 	}
-
+		
 	e1 = create_enumerator(this, type);
 	e2 = other->create_enumerator(other, type);
 	if (!e1->enumerate(e1, &alg1, NULL))
@@ -331,6 +392,13 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 
 	}
 
+	if (contain_unknown_transforms(other))
+	{
+		DBG2(DBG_CFG, "  proposal unacceptable, skipping");
+		DBG2(DBG_CFG, "  reason: an unknown transform type is present");
+		selected->destroy(selected);
+		return NULL;
+	}
 	if (!select_algo(this, other, selected, ENCRYPTION_ALGORITHM, private) ||
 		!select_algo(this, other, selected, PSEUDO_RANDOM_FUNCTION, private) ||
 		!select_algo(this, other, selected, INTEGRITY_ALGORITHM, private) ||
@@ -418,7 +486,8 @@ METHOD(proposal_t, equals, bool,
 		algo_list_equals(this, other, INTEGRITY_ALGORITHM) &&
 		algo_list_equals(this, other, PSEUDO_RANDOM_FUNCTION) &&
 		algo_list_equals(this, other, DIFFIE_HELLMAN_GROUP) &&
-		algo_list_equals(this, other, EXTENDED_SEQUENCE_NUMBERS));
+		algo_list_equals(this, other, EXTENDED_SEQUENCE_NUMBERS) &&
+		!contain_unknown_transforms(other));
 }
 
 METHOD(proposal_t, clone_, proposal_t*,
@@ -677,6 +746,38 @@ static int print_alg(private_proposal_t *this, printf_hook_data_t *data,
 }
 
 /**
+ * print all unknown transform types to buffer
+ */
+static int print_unknown_transforms(private_proposal_t *this, 
+									printf_hook_data_t *data, bool *first)
+{
+	enumerator_t *enumerator;
+	size_t written = 0;
+	uint16_t type, alg, size;
+
+	enumerator = create_unknown_transform_enumerator(this);
+	while (enumerator->enumerate(enumerator, &type, &alg, &size))
+	{
+		if (*first)
+		{
+			written += print_in_hook(data, "UNKNOWN(TYPE=%u,ID=%u", type, alg);
+			*first = FALSE;
+		}
+		else
+		{
+			written += print_in_hook(data, "/UNKNOWN(TYPE=%u,ID=%u", type, alg);
+		}
+		if (size)
+		{
+			written += print_in_hook(data, ",SIZE=%u", size);
+		}
+		written += print_in_hook(data, ")");
+	}
+	enumerator->destroy(enumerator);
+	return written;
+}
+
+/**
  * Described in header.
  */
 int proposal_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
@@ -723,6 +824,7 @@ int proposal_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 						 diffie_hellman_group_names, &first);
 	written += print_alg(this, data, EXTENDED_SEQUENCE_NUMBERS,
 						 extended_sequence_numbers_names, &first);
+	written += print_unknown_transforms(this, data, &first); 
 	return written;
 }
 
