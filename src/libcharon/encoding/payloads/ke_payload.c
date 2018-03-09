@@ -259,5 +259,9 @@ ke_payload_t *ke_payload_create_from_diffie_hellman(payload_type_t type,
 	this->dh_group_number = dh->get_dh_group(dh);
 	this->payload_length += this->key_exchange_data.len;
 
+#if defined(PQPERF)
+	printf("PQPERF: ke_payload data len = %lu\n", this->key_exchange_data.len);
+#endif
+
 	return &this->public;
 }

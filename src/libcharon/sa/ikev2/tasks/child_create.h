@@ -68,6 +68,9 @@ struct child_create_t {
 	 * @param dh_group	DH group to use
 	 */
 	void (*use_dh_group)(child_create_t *this, diffie_hellman_group_t dh_group);
+#ifdef QSKE
+	void (*use_qs_group)(child_create_t *this, quantum_safe_group_t qs_group);
+#endif
 
 	/**
 	 * Get the lower of the two nonces, used for rekey collisions.

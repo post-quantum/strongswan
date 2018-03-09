@@ -29,6 +29,8 @@ typedef struct diffie_hellman_params_t diffie_hellman_params_t;
 
 #include <library.h>
 
+#include "quantum_safe.h"
+
 /**
  * Diffie-Hellman group.
  *
@@ -72,6 +74,13 @@ enum diffie_hellman_group_t {
 	NTRU_192_BIT = 1032,
 	NTRU_256_BIT = 1033,
 	NH_128_BIT   = 1040,
+	/** NIST_PQC algorithms */
+	NIST_PQC_NEWHOPE512CCA = 2048,
+	NIST_PQC_KYBER512 = 2049,
+	NIST_PQC_NTRULPR4591761 = 2050,
+	NIST_PQC_NTRUKEM443 = 2051,
+	NIST_PQC_SIKEP503 = 2052,
+	NIST_PQC_LEDAKEM128SLN02 = 2053,
 	/** internally used DH group with additional parameters g and p, outside
 	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */
 	MODP_CUSTOM = 65536,

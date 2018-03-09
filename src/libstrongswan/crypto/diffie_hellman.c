@@ -53,7 +53,14 @@ ENUM_NEXT(diffie_hellman_group_names, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
 	"NTRU_256");
 ENUM_NEXT(diffie_hellman_group_names, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
 	"NEWHOPE_128");
-ENUM_NEXT(diffie_hellman_group_names, MODP_CUSTOM, MODP_CUSTOM, NH_128_BIT,
+ENUM_NEXT(diffie_hellman_group_names, NIST_PQC_NEWHOPE512CCA, NIST_PQC_LEDAKEM128SLN02, NH_128_BIT,
+	"NIST_PQC_NEWHOPE512CCA",
+	"NIST_PQC_KYBER512",
+	"NIST_PQC_NTRULPR4591761",
+	"NIST_PQC_NTRUKEM443",
+	"NIST_PQC_SIKEP503",
+	"NIST_PQC_LEDAKEM128SLN02");
+ENUM_NEXT(diffie_hellman_group_names, MODP_CUSTOM, MODP_CUSTOM, NIST_PQC_LEDAKEM128SLN02,
 	"MODP_CUSTOM");
 ENUM_END(diffie_hellman_group_names, MODP_CUSTOM);
 
@@ -559,6 +566,19 @@ bool diffie_hellman_verify_value(diffie_hellman_group_t group, chunk_t value)
 		case NTRU_256_BIT:
 		case NH_128_BIT:
 			/* verification currently not supported, do in plugin */
+			valid = FALSE;
+			break;
+		case NIST_PQC_NEWHOPE512CCA:
+		case NIST_PQC_KYBER512:
+		case NIST_PQC_NTRULPR4591761:
+		case NIST_PQC_NTRUKEM443:
+		case NIST_PQC_SIKEP503:
+		case NIST_PQC_LEDAKEM128SLN02:
+			/**
+			 * TODO: 
+			 * - We know the public-key size of these PQ ciphers,
+			 *   some verifications could be done here.
+			 **/
 			valid = FALSE;
 			break;
 		case MODP_NULL:

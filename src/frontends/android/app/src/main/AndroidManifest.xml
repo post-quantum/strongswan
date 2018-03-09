@@ -56,7 +56,8 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.VpnProfileDetailActivity" >
+            android:name=".ui.VpnProfileDetailActivity"
+            android:windowSoftInputMode="stateHidden" >
         </activity>
         <activity
             android:name=".ui.TrustedCertificatesActivity"

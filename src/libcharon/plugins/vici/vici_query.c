@@ -216,6 +216,13 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 			{
 				b->add_kv(b, "esn", "1");
 			}
+#ifdef QSKE
+			if (proposal->get_algorithm(proposal, QUANTUM_SAFE_GROUP,
+										&alg, NULL))
+			{
+				b->add_kv(b, "qs-group", "%N", quantum_safe_group_names, alg);
+			}
+#endif
 		}
 
 		child->get_usestats(child, TRUE,  &t, &bytes, &packets);
@@ -416,6 +423,12 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 		{
 			b->add_kv(b, "dh-group", "%N", diffie_hellman_group_names, alg);
 		}
+#ifdef QSKE
+		if (proposal->get_algorithm(proposal, QUANTUM_SAFE_GROUP, &alg, NULL))
+		{
+			b->add_kv(b, "qs-group", "%N", quantum_safe_group_names, alg);
+		}
+#endif
 	}
 	add_condition(b, ike_sa, "ppk", COND_PPK);
 
@@ -1276,6 +1289,17 @@ CALLBACK(get_algorithms, vici_message_t*,
 	}
 	enumerator->destroy(enumerator);
 	b->end_section(b);
+
+#ifdef QSKE
+	b->begin_section(b, "qs");
+	enumerator = lib->crypto->create_qs_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &group, &plugin_name))
+	{
+		add_algorithm(b, quantum_safe_group_names, group, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+#endif
 
 	b->begin_section(b, "rng");
 	enumerator = lib->crypto->create_rng_enumerator(lib->crypto);

@@ -24,6 +24,9 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/ke_payload.h>
+#ifdef QSKE
+#include <encoding/payloads/qske_payload.h>
+#endif
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/cert_payload.h>
@@ -95,6 +98,23 @@ ENUM_NEXT(payload_type_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_FRAGME
 	"NAT_OA_DRAFT_V1",
 	"FRAGMENT");
 #endif /* ME */
+#ifdef QSKE
+ENUM_NEXT(payload_type_names, PLV2_QSKEY_EXCHANGE, PLV2_QSKEY_EXCHANGE, PLV1_FRAGMENT,
+    "QUANTUM_SAFE KEY_EXCHANGE");
+ENUM_NEXT(payload_type_names, PL_HEADER, PLV1_ENCRYPTED, PLV2_QSKEY_EXCHANGE,
+	"HEADER",
+	"UNKNOWN",
+	"PROPOSAL_SUBSTRUCTURE",
+	"PROPOSAL_SUBSTRUCTURE_V1",
+	"TRANSFORM_SUBSTRUCTURE",
+	"TRANSFORM_SUBSTRUCTURE_V1",
+	"TRANSFORM_ATTRIBUTE",
+	"TRANSFORM_ATTRIBUTE_V1",
+	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
+	"CONFIGURATION_ATTRIBUTE",
+	"CONFIGURATION_ATTRIBUTE_V1",
+	"ENCRYPTED_V1");
+#else /* QSKE */
 ENUM_NEXT(payload_type_names, PL_HEADER, PLV1_ENCRYPTED, PLV1_FRAGMENT,
 	"HEADER",
 	"UNKNOWN",
@@ -108,6 +128,7 @@ ENUM_NEXT(payload_type_names, PL_HEADER, PLV1_ENCRYPTED, PLV1_FRAGMENT,
 	"CONFIGURATION_ATTRIBUTE",
 	"CONFIGURATION_ATTRIBUTE_V1",
 	"ENCRYPTED_V1");
+#endif /* QSKE */
 ENUM_END(payload_type_names, PLV1_ENCRYPTED);
 
 /* short forms of payload names */
@@ -166,6 +187,23 @@ ENUM_NEXT(payload_type_short_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_
 	"NAT-OA",
 	"FRAG");
 #endif /* ME */
+#ifdef QSKE
+ENUM_NEXT(payload_type_short_names, PLV2_QSKEY_EXCHANGE, PLV2_QSKEY_EXCHANGE, PLV1_FRAGMENT,
+	"QSKE");
+ENUM_NEXT(payload_type_short_names, PL_HEADER, PLV1_ENCRYPTED, PLV2_QSKEY_EXCHANGE,
+	"HDR",
+	"UNKN",
+	"PROP",
+	"PROP",
+	"TRANS",
+	"TRANS",
+	"TRANSATTR",
+	"TRANSATTR",
+	"TSSUB",
+	"CATTR",
+	"CATTR",
+	"E");
+#else /* QSKE */
 ENUM_NEXT(payload_type_short_names, PL_HEADER, PLV1_ENCRYPTED, PLV1_FRAGMENT,
 	"HDR",
 	"UNKN",
@@ -179,6 +217,7 @@ ENUM_NEXT(payload_type_short_names, PL_HEADER, PLV1_ENCRYPTED, PLV1_FRAGMENT,
 	"CATTR",
 	"CATTR",
 	"E");
+#endif /* QSKE */
 ENUM_END(payload_type_short_names, PLV1_ENCRYPTED);
 
 /*
@@ -231,6 +270,10 @@ payload_t *payload_create(payload_type_t type)
 		case PLV2_KEY_EXCHANGE:
 		case PLV1_KEY_EXCHANGE:
 			return (payload_t*)ke_payload_create(type);
+#ifdef QSKE
+		case PLV2_QSKEY_EXCHANGE:
+			return (payload_t *)qske_payload_create(type);
+#endif
 		case PLV2_NOTIFY:
 		case PLV1_NOTIFY:
 			return (payload_t*)notify_payload_create(type);
@@ -306,6 +349,12 @@ bool payload_is_known(payload_type_t type, uint8_t maj_ver)
 			}
 #ifdef ME
 			if (type == PLV2_ID_PEER)
+			{
+				return TRUE;
+			}
+#endif
+#ifdef QSKE
+			if (type == PLV2_QSKEY_EXCHANGE)
 			{
 				return TRUE;
 			}

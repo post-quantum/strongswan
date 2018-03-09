@@ -1,5 +1,11 @@
 LOCAL_PATH := $(call my-dir)
+
+# Tell Android NDK build system about the prebuilt NIST lib
 include $(CLEAR_VARS)
+LOCAL_MODULE := nistpqc
+LOCAL_SRC_FILES :=  /home/reuben/work/nistpqc/build/android/libnistpqc.a
+include $(PREBUILT_STATIC_LIBRARY)
+
 
 # use "bring your own device" (BYOD) features (also see USE_BYOD in
 # MainActivity.java)
@@ -7,7 +13,8 @@ strongswan_USE_BYOD := true
 
 strongswan_CHARON_PLUGINS := android-log openssl fips-prf random nonce pubkey \
 	chapoly curve25519 pkcs1 pkcs8 pem xcbc hmac socket-default revocation \
-	eap-identity eap-mschapv2 eap-md5 eap-gtc eap-tls x509
+	eap-identity eap-mschapv2 eap-md5 eap-gtc eap-tls x509 \
+	sha3 mgf1 newhope ntru nistpqc
 
 ifneq ($(strongswan_USE_BYOD),)
 strongswan_BYOD_PLUGINS := eap-ttls eap-tnc tnc-imc tnc-tnccs tnccs-20
@@ -21,6 +28,7 @@ strongswan_DIR := ../../../../../../../
 # includes
 strongswan_PATH := $(LOCAL_PATH)/$(strongswan_DIR)
 openssl_PATH := $(LOCAL_PATH)/openssl/include
+
 
 include $(strongswan_PATH)/Android.common.mk
 
@@ -59,7 +67,9 @@ strongswan_CFLAGS := \
 	-DCHARON_NATT_PORT=0 \
 	-DVERSION=\"$(strongswan_VERSION)\" \
 	-DDEV_RANDOM=\"/dev/random\" \
-	-DDEV_URANDOM=\"/dev/urandom\"
+	-DDEV_URANDOM=\"/dev/urandom\" \
+	-DQSKE \
+	-I/usr/local/include
 
 ifneq ($(strongswan_USE_BYOD),)
 strongswan_CFLAGS += -DUSE_BYOD
@@ -79,6 +89,8 @@ strongswan_BUILD += \
 	$(strongswan_DIR)/src/libimcv \
 	$(strongswan_DIR)/src/libtpmtss
 endif
+
+LOCAL_STATIC_LIBRARIES += nistpqc
 
 include $(addprefix $(LOCAL_PATH)/,$(addsuffix /Android.mk, \
 		$(strongswan_BUILD)))

@@ -100,7 +100,7 @@ struct proposal_t {
 	 */
 	bool (*get_algorithm) (proposal_t *this, transform_type_t type,
 						   uint16_t *alg, uint16_t *key_size);
-
+	
 	/**
 	 * Check if the proposal has a specific DH group.
 	 *
@@ -124,6 +124,26 @@ struct proposal_t {
 	 * @param keep			group to keep (MODP_NONE to remove all)
 	 */
 	void (*strip_dh)(proposal_t *this, diffie_hellman_group_t keep);
+
+#ifdef QSKE
+	/**
+ 	 * Check if the proposal has a specific QS DH group.
+	 *
+	 * @param group         group to check for
+	 * @return              TRUE if algorithm included
+	 */
+    bool (*has_qs_group) (proposal_t *this, quantum_safe_group_t group);
+
+	quantum_safe_group_t (*get_qs_group) (proposal_t *this);
+
+	/**
+	 * Strip QS groups from proposal to use it without PFS.
+	 *
+	 * @param keep			group to keep (QS_NONE to remove all)
+	 */
+	void (*strip_qs)(proposal_t *this, quantum_safe_group_t keep);
+
+#endif
 
 	/**
 	 * Compare two proposal, and select a matching subset.

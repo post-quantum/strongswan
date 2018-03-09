@@ -178,7 +178,10 @@
             android:id="@+id/show_advanced"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/profile_show_advanced_label" />
+            android:text="@string/profile_show_advanced_label"
+            android:checked="true"
+            android:visibility="gone"
+            />
 
         <LinearLayout
             android:id="@+id/advanced_settings"
@@ -192,6 +195,7 @@
                 android:layout_marginTop="10dp"
                 android:layout_marginLeft="4dp"
                 android:textSize="20sp"
+                android:visibility="gone"
                 android:text="@string/profile_advanced_label" />
 
             <org.strongswan.android.ui.widget.TextInputLayoutHelper
@@ -217,7 +221,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/profile_mtu_label"
-                app:helper_text="@string/profile_mtu_hint" >
+                app:helper_text="@string/profile_mtu_hint"
+                android:visibility="gone"
+                >
 
                 <android.support.design.widget.TextInputEditText
                     android:id="@+id/mtu"
@@ -232,7 +238,7 @@
                 android:id="@+id/port_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/profile_port_label"
+                android:visibility="gone"
                 app:helper_text="@string/profile_port_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -248,7 +254,7 @@
                 android:id="@+id/nat_keepalive_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/profile_nat_keepalive_label"
+                android:visibility="gone"
                 app:helper_text="@string/profile_nat_keepalive_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -266,6 +272,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
+                android:visibility="gone"
                 android:text="@string/profile_cert_req_label" />
 
             <TextView
@@ -275,6 +282,7 @@
                 android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:textSize="12sp"
+                android:visibility="gone"
                 android:text="@string/profile_cert_req_hint" />
 
             <Switch
@@ -353,6 +361,7 @@
                 android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:textSize="20sp"
+                android:visibility="gone"
                 android:text="@string/profile_split_tunneling_label" />
 
             <TextView
@@ -362,13 +371,14 @@
                 android:layout_marginBottom="10dp"
                 android:layout_marginLeft="4dp"
                 android:textSize="12sp"
+                android:visibility="gone"
                 android:text="@string/profile_split_tunneling_intro" />
 
             <org.strongswan.android.ui.widget.TextInputLayoutHelper
                 android:id="@+id/included_subnets_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/profile_included_subnets_label"
+                android:visibility="gone"
                 app:helper_text="@string/profile_included_subnets_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -384,7 +394,6 @@
                 android:id="@+id/excluded_subnets_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/profile_excluded_subnets_label"
                 app:helper_text="@string/profile_excluded_subnets_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -400,12 +409,14 @@
                 android:id="@+id/split_tunneling_v4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:visibility="gone"
                 android:text="@string/profile_split_tunnelingv4_title" />
 
             <CheckBox
                 android:id="@+id/split_tunneling_v6"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:visibility="gone"
                 android:text="@string/profile_split_tunnelingv6_title" />
 
             <TextView
@@ -417,6 +428,7 @@
                 android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:textSize="20sp"
+                android:visibility="gone"
                 android:text="@string/profile_select_apps_label" />
 
             <Spinner
@@ -424,6 +436,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:spinnerMode="dropdown"
+                android:visibility="gone"
                 android:entries="@array/apps_handling" />
 
             <include
@@ -438,49 +451,99 @@
                 android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:textSize="20sp"
-                android:text="@string/profile_proposals_label" />
+                android:text="Algorithms" />
 
             <TextView
-                android:id="@+id/proposal_intro"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp"
                 android:layout_marginLeft="4dp"
+                android:layout_marginBottom="10dp"
                 android:textSize="12sp"
-                android:text="@string/profile_proposals_intro" />
-
-            <org.strongswan.android.ui.widget.TextInputLayoutHelper
-                android:id="@+id/ike_proposal_wrap"
+                android:text="NB: The encryption transform type is always 256-bit AES-GCM with 128-bit IV and the PRF transform type is always HMAC-SHA2-256." />
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/profile_proposals_ike_label"
-                app:helper_text="@string/profile_proposals_ike_hint" >
-
-                <android.support.design.widget.TextInputEditText
-                    android:id="@+id/ike_proposal"
-                    android:layout_width="match_parent"
+                <View
+                    android:layout_width="28dp"
+                    android:layout_height="0dp"
+                    android:layout_marginLeft="4dp"
+                    />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="2"
                     android:layout_height="wrap_content"
-                    android:singleLine="true"
-                    android:inputType="textNoSuggestions" />
-
-            </org.strongswan.android.ui.widget.TextInputLayoutHelper>
-
-            <org.strongswan.android.ui.widget.TextInputLayoutHelper
-                android:id="@+id/esp_proposal_wrap"
+                    android:text="@string/diffie_hellman_label"
+                    android:textSize="12dp"
+                    android:selectAllOnFocus="false"
+                    android:linksClickable="false"
+                    android:autoLink="all"
+                    android:paddingLeft="8dp"
+                    />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="3"
+                    android:layout_height="wrap_content"
+                    android:text="@string/quantum_safe_label"
+                    android:textSize="12dp"
+                    android:selectAllOnFocus="false"
+                    android:linksClickable="false"
+                    android:autoLink="all"
+                    android:paddingLeft="8dp"
+                    />
+            </LinearLayout>
+            <LinearLayout
                 android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="28dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="4dp"
+                    android:inputType="textNoSuggestions"
+                    android:text="IKE:" />
+            <Spinner
+                android:id="@+id/ike_dh"
+                android:layout_width="0dp"
+                android:layout_weight="2"
+                    android:hint="@string/profile_proposals_ike_label" />
+                android:spinnerMode="dropdown"
+                android:padding="1dp"
+                />
+            <Spinner
+                android:id="@+id/ike_qs"
+                android:layout_width="0dp"
+                android:layout_weight="3"
                 android:layout_height="wrap_content"
                 android:hint="@string/profile_proposals_esp_label"
-                app:helper_text="@string/profile_proposals_esp_hint" >
-
-                <android.support.design.widget.TextInputEditText
-                    android:id="@+id/esp_proposal"
-                    android:layout_width="match_parent"
+                android:spinnerMode="dropdown"
+                android:padding="1dp"
+                />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="28dp"
                     android:layout_height="wrap_content"
-                    android:singleLine="true"
-                    android:inputType="textNoSuggestions" />
-
-            </org.strongswan.android.ui.widget.TextInputLayoutHelper>
+                    android:layout_marginLeft="4dp"
+                    android:textSize="12sp"
+                    android:text="ESP:" />
+                <Spinner
+                    android:id="@+id/esp_dh"
+                    android:layout_width="0dp"
+                    android:layout_weight="2"
+                    android:inputType="textNoSuggestions"
+                    android:padding="1dp"
+                    />
+                <Spinner
+                    android:id="@+id/esp_qs"
+                    android:layout_width="0dp"
+                    android:layout_weight="3"
+                    android:hint="@string/profile_proposals_esp_label" />
+                    android:padding="1dp"
+                    />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/profile_id_label"

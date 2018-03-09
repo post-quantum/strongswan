@@ -146,6 +146,12 @@ CALLBACK(child_sas, int,
 		{
 			printf("/%s", child->get(child, "dh-group"));
 		}
+#ifdef QSKE
+		if (child->get(child, "qs-group"))
+		{
+			printf("/%s", child->get(child, "qs-group"));
+		}
+#endif
 		if (child->get(child, "esn"))
 		{
 			printf("/ESN");
@@ -270,6 +276,10 @@ CALLBACK(ike_sa, int,
 			{
 				printf("/PPK");
 			}
+#ifdef QSKE
+			printf("/%s", ike->get(ike, "qs-group"));
+#endif
+			
 			printf("\n");
 		}
 

@@ -68,6 +68,8 @@ struct keymat_t {
 	 */
 	diffie_hellman_t* (*create_dh)(keymat_t *this,
 								   diffie_hellman_group_t group);
+	quantum_safe_t* (*create_qs)(keymat_t *this,
+								   quantum_safe_group_t group);
 
 	/**
 	 * Create a nonce generator object.

@@ -435,8 +435,12 @@ static void initiate(settings_t *settings)
 						settings->get_int(settings, "global.nat_keepalive",
 										  ANDROID_KEEPALIVE_INTERVAL));
 
+
+	lib->settings->set_bool(lib->settings, "charon.send_vendor_id", TRUE);
+
 	/* reload plugins after changing settings */
 	lib->plugins->reload(lib->plugins, NULL);
+
 
 	this->creds->clear(this->creds);
 	DESTROY_IF(this->service);

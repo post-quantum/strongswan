@@ -334,6 +334,75 @@ METHOD(proposal_t, strip_dh, void,
 	}
 }
 
+#ifdef QSKE
+METHOD(proposal_t, has_qs_group, bool,
+       private_proposal_t *this, quantum_safe_group_t group)
+{
+	bool found = FALSE, any = FALSE;
+	enumerator_t *enumerator;
+	quantum_safe_group_t current = QS_NONE;
+
+	enumerator = create_enumerator(this, QUANTUM_SAFE_GROUP);
+	while (enumerator->enumerate(enumerator, &current, NULL))
+	{
+			any = TRUE;
+			if (current == group)
+			{
+				found = TRUE;
+				break;
+			}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!any && group == QS_NONE)
+	{
+		found = TRUE;
+	}
+
+	return found;
+}
+
+
+
+METHOD(proposal_t, get_qs_group, quantum_safe_group_t,  private_proposal_t *this)
+{
+	bool found = FALSE;
+	enumerator_t *enumerator;
+	quantum_safe_group_t current = QS_NONE;
+
+	enumerator = create_enumerator(this, QUANTUM_SAFE_GROUP);
+	while (enumerator->enumerate(enumerator, &current, NULL))
+	{
+		found = TRUE;
+		break;
+	}
+	enumerator->destroy(enumerator);
+
+	return found ? current : QS_NONE;
+}
+
+
+METHOD(proposal_t, strip_qs, void,
+	private_proposal_t *this, quantum_safe_group_t keep)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+
+	enumerator = array_create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->type == QUANTUM_SAFE_GROUP &&
+			entry->alg != keep)
+		{
+			array_remove_at(this->transforms, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+#endif
+
+
 /**
  * Select a matching proposal from this and other.
  */
@@ -345,7 +414,11 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 	uint16_t alg1, alg2, ks1, ks2;
 	bool found = FALSE, optional = FALSE;
 
+#ifdef QSKE
+	if (type == DIFFIE_HELLMAN_GROUP || type == QUANTUM_SAFE_GROUP)
+#else
 	if (type == DIFFIE_HELLMAN_GROUP)
+#endif
 	{
 		optional = this->protocol == PROTO_ESP || this->protocol == PROTO_AH;
 	}
@@ -466,6 +539,7 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 	array_destroy(types);
 	return TRUE;
 }
+
 
 METHOD(proposal_t, select_proposal, proposal_t*,
 	private_proposal_t *this, proposal_t *other, bool other_remote,
@@ -955,6 +1029,11 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 			.has_dh_group = _has_dh_group,
 			.promote_dh_group = _promote_dh_group,
 			.strip_dh = _strip_dh,
+#ifdef QSKE
+			.has_qs_group = _has_qs_group,
+			.get_qs_group = _get_qs_group,
+			.strip_qs = _strip_qs,
+#endif
 			.select = _select_proposal,
 			.matches = _matches,
 			.get_protocol = _get_protocol,
@@ -1177,6 +1256,12 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case NTRU_192_BIT:
 			case NTRU_256_BIT:
 			case NH_128_BIT:
+			case NIST_PQC_NEWHOPE512CCA:
+			case NIST_PQC_KYBER512:
+			case NIST_PQC_NTRULPR4591761:
+			case NIST_PQC_NTRUKEM443:
+			case NIST_PQC_SIKEP503:
+			case NIST_PQC_LEDAKEM128SLN02:
 				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
 				break;
 			default:
@@ -1236,6 +1321,28 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+#ifdef QSKE
+	/* Add quantum-safe algorithms */
+	enumerator = lib->crypto->create_qs_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &group, &plugin_name))
+	{
+		switch (group)
+		{
+			case QS_NIST_PQC_NEWHOPE512CCA:
+			case QS_NIST_PQC_KYBER512:
+			case QS_NIST_PQC_NTRULPR4591761:
+			case QS_NIST_PQC_NTRUKEM443:
+			case QS_NIST_PQC_SIKEP503:
+			case QS_NIST_PQC_LEDAKEM128SLN02:
+				add_algorithm(this, QUANTUM_SAFE_GROUP, group, 0);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+#endif
 
 	return TRUE;
 }

@@ -216,4 +216,6 @@
     <string name="tile_connect">Connect VPN</string>
     <string name="tile_disconnect">Disconnect VPN</string>
 
+    <string name="diffie_hellman_label"><u>Diffie-Hellman</u></string>
+    <string name="quantum_safe_label"><u>Quantum-Safe</u></string>
 </resources>

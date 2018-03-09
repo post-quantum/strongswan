@@ -90,6 +90,14 @@ METHOD(keymat_t, create_dh, diffie_hellman_t*,
 	return lib->crypto->create_dh(lib->crypto, group);
 }
 
+#ifdef QSKE
+METHOD(keymat_t, create_qs, quantum_safe_t*,
+	private_keymat_v2_t *this, quantum_safe_group_t group)
+{
+	return lib->crypto->create_qs(lib->crypto, group);
+}
+#endif
+
 METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
 	private_keymat_v2_t *this)
 {
@@ -300,10 +308,16 @@ failure:
 
 METHOD(keymat_v2_t, derive_ike_keys, bool,
 	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+#ifdef QSKE
+	quantum_safe_t *qs,
+#endif
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
 	chunk_t skeyseed = chunk_empty, key, secret, full_nonce, fixed_nonce;
+#ifdef QSKE
+	chunk_t dh_secret, qs_secret;
+#endif
 	chunk_t prf_plus_seed, spi_i, spi_r;
 	prf_plus_t *prf_plus = NULL;
 	uint16_t alg, key_size, int_alg;
@@ -312,10 +326,52 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	spi_i = chunk_alloca(sizeof(uint64_t));
 	spi_r = chunk_alloca(sizeof(uint64_t));
 
+#ifdef QSKE
+	if (dh)
+	{
+		/* We have classical Diffie-Hellman shared secret */
+		if (!dh->get_shared_secret(dh, &dh_secret))
+		{
+			return FALSE;
+		}
+		if (qs)
+		{
+			DBG4(DBG_IKE, "shared DH secret : %B", &dh_secret);
+			/* We also have a quantum-safe shared secret */
+			if (!qs->get_shared_secret(qs, &qs_secret))
+			{
+				return FALSE;
+			}
+			DBG4(DBG_IKE, "Shared QS secret : %B", &qs_secret);
+			secret = chunk_cat("ss", dh_secret, qs_secret);
+			DBG4(DBG_IKE, "shared DH | QS secret : %B", &secret);
+		}
+		else
+		{
+			secret = chunk_cat("s", dh_secret);
+			DBG4(DBG_IKE, "shared DH secret : %B", &secret);
+		}
+	}
+	else if (qs)
+	{
+		if (!qs->get_shared_secret(qs, &secret))
+		{
+			return FALSE;
+		}
+		DBG4(DBG_IKE, "shared QS secret : %B", &secret);
+	}
+	else
+	{
+		DBG1(DBG_IKE,
+			"No classical nor quantum-safe key-exchange secret is provided");
+		return FALSE;
+	}
+#else
 	if (!dh->get_shared_secret(dh, &secret))
 	{
 		return FALSE;
 	}
+#endif
 
 	/* Create SAs general purpose PRF first, we may use it here */
 	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL))
@@ -580,11 +636,17 @@ METHOD(keymat_v2_t, derive_ike_keys_ppk, bool,
 
 METHOD(keymat_v2_t, derive_child_keys, bool,
 	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+#ifdef QSKE
+	quantum_safe_t *qs,
+#endif
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	uint16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
 	chunk_t seed, secret = chunk_empty;
+#ifdef QSKE
+	chunk_t dh_secret, qs_secret;
+#endif
 	prf_plus_t *prf_plus;
 
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
@@ -656,6 +718,41 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		return FALSE;
 	}
 
+#ifdef QSKE
+	if (dh)
+	{
+		/* We have classical Diffie-Hellman shared secret */
+		if (!dh->get_shared_secret(dh, &dh_secret))
+		{
+			return FALSE;
+		}
+		if (qs)
+		{
+			DBG4(DBG_CHD, "shared DH secret : %B", &dh_secret);
+			/* We also have a quantum-safe shared secret */
+			if (!qs->get_shared_secret(qs, &qs_secret))
+			{
+				return FALSE;
+			}
+			DBG4(DBG_CHD, "shared QS secret : %B", &qs_secret);
+			secret = chunk_cat("ss", dh_secret, qs_secret);
+			DBG4(DBG_CHD, "shared DH | QS secret : %B", &secret);
+		}
+		else
+		{
+			secret = chunk_cat("s", dh_secret);
+			DBG4(DBG_CHD, "shared DH secret : %B", &secret);
+		}
+	}
+	else if (qs)
+	{
+		if (!qs->get_shared_secret(qs, &secret))
+		{
+			return FALSE;
+		}
+		DBG4(DBG_CHD, "shared QS secret : %B", &secret);
+	}
+#else
 	if (dh)
 	{
 		if (!dh->get_shared_secret(dh, &secret))
@@ -664,6 +761,8 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		}
 		DBG4(DBG_CHD, "DH secret %B", &secret);
 	}
+#endif
+
 	seed = chunk_cata("scc", secret, nonce_i, nonce_r);
 	DBG4(DBG_CHD, "seed %B", &seed);
 
@@ -858,6 +957,9 @@ keymat_v2_t *keymat_v2_create(bool initiator)
 			.keymat = {
 				.get_version = _get_version,
 				.create_dh = _create_dh,
+#ifdef QSKE
+				.create_qs = _create_qs,
+#endif
 				.create_nonce_gen = _create_nonce_gen,
 				.get_aead = _get_aead,
 				.destroy = _destroy,

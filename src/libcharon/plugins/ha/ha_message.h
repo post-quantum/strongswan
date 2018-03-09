@@ -158,6 +158,14 @@ enum ha_message_attribute_t {
 	HA_IV,
 	/** uint16_t, auth_method_t for IKEv1 key derivation */
 	HA_AUTH_METHOD,
+#ifdef QSKE
+	/** uint16_t, QS group */
+	HA_ALG_QS,
+	/** chunk_t, own QS public value */
+	HA_LOCAL_QS,
+	/** chunk_t, remote QS public value */
+	HA_REMOTE_QS,
+#endif
 };
 
 /**

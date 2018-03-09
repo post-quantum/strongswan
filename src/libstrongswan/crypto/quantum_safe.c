@@ -1,0 +1,19 @@
+/*
+ * Experimental code from Post-Quantum
+ */
+
+#include "quantum_safe.h"
+
+#ifdef QSKE
+
+ENUM_BEGIN(quantum_safe_group_names, QS_NIST_PQC_NEWHOPE512CCA, QS_NIST_PQC_LEDAKEM128SLN02,
+	"QS_NIST_PQC_NEWHOPE512CCA",
+	"QS_NIST_PQC_KYBER512",
+	"QS_NIST_PQC_NTRULPR4591761",
+	"QS_NIST_PQC_NTRUKEM443",
+	"QS_NIST_PQC_SIKEP503",
+	"QS_NIST_PQC_LEDAKEM128SLN02");
+ENUM_END(quantum_safe_group_names, QS_NIST_PQC_LEDAKEM128SLN02);
+
+
+#endif

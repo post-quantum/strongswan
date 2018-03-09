@@ -23,6 +23,9 @@
 
 typedef struct private_ha_dispatcher_t private_ha_dispatcher_t;
 typedef struct ha_diffie_hellman_t ha_diffie_hellman_t;
+#ifdef QSKE
+typedef struct ha_quantum_safe_t ha_quantum_safe_t;
+#endif
 
 /**
  * Private data of an ha_dispatcher_t object.
@@ -121,6 +124,70 @@ static diffie_hellman_t *ha_diffie_hellman_create(chunk_t secret, chunk_t pub)
 	return &this->dh;
 }
 
+#ifdef QSKE
+
+/**
+ * QS implementation for HA synced QS values
+ */
+struct ha_quantum_safe_t {
+
+	/**
+	 * Implements quantum_safe_t
+	 */
+	quantum_safe_t qs;
+
+	/**
+	 * Shared secret
+	 */
+	chunk_t secret;
+
+	/**
+	 * Own public value
+	 */
+	chunk_t pub;
+};
+
+METHOD(quantum_safe_t, qs_get_shared_secret, bool,
+	ha_quantum_safe_t *this, chunk_t *secret)
+{
+	*secret = chunk_clone(this->secret);
+	return TRUE;
+}
+
+METHOD(quantum_safe_t, qs_get_my_public_value, bool,
+	ha_quantum_safe_t *this, chunk_t *value)
+{
+	*value = chunk_clone(this->pub);
+	return TRUE;
+}
+
+METHOD(quantum_safe_t, qs_destroy, void,
+	ha_quantum_safe_t *this)
+{
+	free(this);
+}
+
+/**
+ * Create a HA synced DH implementation
+ */
+static quantum_safe_t *ha_quantum_safe_create(chunk_t secret, chunk_t pub)
+{
+	ha_quantum_safe_t *this;
+
+	INIT(this,
+		.qs = {
+			.get_shared_secret = _qs_get_shared_secret,
+			.get_my_public_value = _qs_get_my_public_value,
+			.destroy = _qs_destroy,
+		},
+		.secret = secret,
+		.pub = pub,
+	);
+
+	return &this->qs;
+}
+#endif
+
 /**
  * Process messages of type IKE_ADD
  */
@@ -133,6 +200,10 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	ike_version_t version = IKEV2;
 	uint16_t encr = 0, len = 0, integ = 0, prf = 0, old_prf = PRF_UNDEFINED;
 	uint16_t dh_grp = 0;
+#ifdef QSKE
+	uint16_t qs_grp = 0;
+	chunk_t qs_local = chunk_empty, qs_remote = chunk_empty;
+#endif
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty;
 	chunk_t secret = chunk_empty, old_skd = chunk_empty;
 	chunk_t dh_local = chunk_empty, dh_remote = chunk_empty, psk = chunk_empty;
@@ -200,6 +271,18 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 				break;
 			case HA_AUTH_METHOD:
 				method = value.u16;
+				break;
+#ifdef QSKE
+			case HA_ALG_QS:
+				qs_grp = value.u16;
+				break;
+			case HA_LOCAL_QS:
+				qs_local = value.chunk;
+				break;
+			case HA_REMOTE_QS:
+				qs_remote = value.chunk;
+				break;
+#endif
 			default:
 				break;
 		}
@@ -210,6 +293,9 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	{
 		proposal_t *proposal;
 		diffie_hellman_t *dh;
+#ifdef QSKE
+		quantum_safe_t *qs = NULL;
+#endif
 
 		proposal = proposal_create(PROTO_IKE, 0);
 		if (integ)
@@ -228,14 +314,25 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		{
 			proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, dh_grp, 0);
 		}
+#ifdef QSKE
+		if (qs_grp)
+		{
+			proposal->add_algorithm(proposal, QUANTUM_SAFE_GROUP, qs_grp, 0);
+			qs = ha_quantum_safe_create(secret, qs_local);
+		}
+#endif
 		charon->bus->set_sa(charon->bus, ike_sa);
 		dh = ha_diffie_hellman_create(secret, dh_local);
 		if (ike_sa->get_version(ike_sa) == IKEV2)
 		{
 			keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 
-			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, dh, nonce_i,
-							nonce_r, ike_sa->get_id(ike_sa), old_prf, old_skd);
+			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, dh, 
+#ifdef QSKE
+				qs,
+#endif
+				nonce_i, nonce_r, ike_sa->get_id(ike_sa),
+				old_prf, old_skd);
 		}
 		if (ike_sa->get_version(ike_sa) == IKEV1)
 		{
@@ -256,6 +353,12 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 			DESTROY_IF(shared);
 		}
 		dh->destroy(dh);
+#ifdef QSKE
+		if (qs) 
+		{
+			qs->destroy(qs);
+		}
+#endif
 		if (ok)
 		{
 			if (old_sa)
@@ -664,6 +767,10 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	chunk_t encr_i, integ_i, encr_r, integ_r;
 	linked_list_t *local_ts, *remote_ts;
 	diffie_hellman_t *dh = NULL;
+#ifdef QSKE
+	uint16_t qs_grp = 0;
+	quantum_safe_t *qs = NULL;
+#endif
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -710,6 +817,11 @@ static void process_child_add(private_ha_dispatcher_t *this,
 			case HA_ALG_DH:
 				dh_grp = value.u16;
 				break;
+#ifdef QSKE
+			case HA_ALG_QS:
+				qs_grp = value.u16;
+				break;
+#endif
 			case HA_ESN:
 				esn = value.u16;
 				break;
@@ -764,6 +876,13 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	{
 		proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, dh_grp, 0);
 	}
+#ifdef QSKE
+	if (qs_grp)
+	{
+		proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, qs_grp, 0);
+		qs = ha_quantum_safe_create(secret, chunk_empty);
+	}
+#endif
 	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, esn, 0);
 	if (secret.len)
 	{
@@ -774,6 +893,9 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 
 		ok = keymat_v2->derive_child_keys(keymat_v2, proposal, dh,
+#ifdef QSKE
+						qs,
+#endif
 						nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r);
 	}
 	if (ike_sa->get_version(ike_sa) == IKEV1)
@@ -788,6 +910,9 @@ static void process_child_add(private_ha_dispatcher_t *this,
 						nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r);
 	}
 	DESTROY_IF(dh);
+#ifdef QSKE
+	DESTROY_IF(qs);
+#endif
 	if (!ok)
 	{
 		DBG1(DBG_CHD, "HA CHILD_SA key derivation failed");

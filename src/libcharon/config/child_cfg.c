@@ -208,6 +208,9 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 		if (strip_dh)
 		{
 			current->strip_dh(current, MODP_NONE);
+#ifdef QSKE
+			current->strip_qs(current, QS_NONE);
+#endif
 		}
 		if (proposals->find_first(proposals, match_proposal, NULL, current))
 		{
@@ -262,6 +265,9 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 			if (strip_dh)
 			{
 				match->strip_dh(match, MODP_NONE);
+#ifdef QSKE
+				proposal->strip_qs(proposal, QS_NONE);
+#endif
 			}
 			selected = proposal->select(proposal, match, prefer_self, private);
 			match->destroy(match);
@@ -536,8 +542,72 @@ METHOD(child_cfg_t, get_dh_group, diffie_hellman_group_t,
 		}
 	}
 	enumerator->destroy(enumerator);
+
+/*#ifdef QSKE
+	// If we have no DH group then check for a QS group i.e. a non-hybrid proposal
+	// that happens to use a QS group
+	if (dh_group == MODP_NONE) 
+	{
+		enumerator = this->proposals->create_enumerator(this->proposals);
+		while (enumerator->enumerate(enumerator, &proposal))
+		{
+			if (proposal->get_algorithm(proposal, QUANTUM_SAFE_GROUP, &dh_group, NULL))
+			{
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+#endif*/
+
 	return dh_group;
 }
+
+#ifdef QSKE
+METHOD(child_cfg_t, get_qs_group, quantum_safe_group_t,
+	private_child_cfg_t *this)
+{
+	enumerator_t *enumerator;
+	proposal_t *proposal;
+	uint16_t qs_group = QS_NONE;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
+	{
+		if (proposal->get_algorithm(proposal, QUANTUM_SAFE_GROUP, &qs_group, NULL))
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	// If we have a QS group, but no DH group, then this is a non-hybrid proposal
+	// and we should return MODP_NONE from here cos the QS DH group will be returned
+	// by get_dh_group(), not get_qs_group().
+	//
+	// i.e. get_qs_group() should only return valid DH methods for hybrid proposals.
+	//
+	/*if (qs_group != QS_NONE)
+	{
+		uint16_t dh_group = MODP_NONE;
+		enumerator = this->proposals->create_enumerator(this->proposals);
+		while (enumerator->enumerate(enumerator, &proposal))
+		{
+			if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
+			{
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+		if (dh_group == MODP_NONE) 
+		{
+			qs_group = QS_NONE;
+		}
+	}*/
+
+	return qs_group;
+}
+#endif
 
 METHOD(child_cfg_t, get_inactivity, uint32_t,
 	private_child_cfg_t *this)
@@ -693,6 +763,9 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_close_action = _get_close_action,
 			.get_lifetime = _get_lifetime,
 			.get_dh_group = _get_dh_group,
+#ifdef QSKE
+			.get_qs_group = _get_qs_group,
+#endif
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,
 			.get_mark = _get_mark,

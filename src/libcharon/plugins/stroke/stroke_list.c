@@ -272,6 +272,13 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 				{
 					fprintf(out, "/%N", diffie_hellman_group_names, alg);
 				}
+#ifdef QSKE
+				if (proposal->get_algorithm(proposal, QUANTUM_SAFE_GROUP,
+											&alg, NULL))
+				{
+					fprintf(out, "/%N", quantum_safe_group_names, alg);
+				}
+#endif
 				if (proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,
 											&alg, NULL) && alg == EXT_SEQ_NUMBERS)
 				{
@@ -912,6 +919,16 @@ static void list_algs(FILE *out)
 		print_alg(out, &len, diffie_hellman_group_names, group, plugin_name);
 	}
 	enumerator->destroy(enumerator);
+#ifdef QSKE
+	fprintf(out, "\n  qs-group:  ");
+	len = 13;
+	enumerator = lib->crypto->create_qs_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &group, &plugin_name))
+	{
+		print_alg(out, &len, quantum_safe_group_names, group, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+#endif
 	fprintf(out, "\n  random-gen:");
 	len = 13;
 	enumerator = lib->crypto->create_rng_enumerator(lib->crypto);

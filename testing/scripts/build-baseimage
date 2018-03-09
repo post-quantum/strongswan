@@ -130,5 +130,14 @@ do
 	execute_chroot "systemctl disable $service"
 done
 
+NISTPQCURL="https://github.com/post-quantum/nistpqc/archive/0.1.tar.gz"
+log_action "Downloading NIST PQC library"
+execute "wget -q $NISTPQCURL -O $LOOPDIR/tmp/nistpqc.tar.gz"
+log_action "Building NIST PQC library source"
+{ rm -rf $LOOPDIR/tmp/nistpqc && mkdir -p $LOOPDIR/tmp/nistpqc && tar xzvf $LOOPDIR/tmp/nistpqc.tar.gz -C $LOOPDIR/tmp/nistpqc --strip-components=1 && make -C $LOOPDIR/tmp/nistpqc; } >> $LOGFILE 2>&1 || die "Failed to build NIST PQC library"
+log_action "Installing NIST PQC library"
+execute_chroot "make -C /tmp/nistpqc install"
+do_on_exit "rm -rf $LOOPDIR/tmp/nistpqc.tar.gz $LOOPDIR/tmp/nistpqc"
+
 log_action "Disabling root password"
 execute_chroot "passwd -d root"

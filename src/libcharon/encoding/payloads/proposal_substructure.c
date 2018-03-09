@@ -1486,6 +1486,18 @@ static void set_from_proposal_v2(private_proposal_substructure_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+#ifdef QSKE
+	/* QSKE groups */
+	enumerator = proposal->create_enumerator(proposal, QUANTUM_SAFE_GROUP);
+	while (enumerator->enumerate(enumerator, &alg, NULL))
+	{
+		transform = transform_substructure_create_type(PLV2_TRANSFORM_SUBSTRUCTURE,
+												QUANTUM_SAFE_GROUP, alg);
+		add_transform_substructure(this, transform);
+	}
+	enumerator->destroy(enumerator);
+#endif
+
 	/* extended sequence numbers */
 	enumerator = proposal->create_enumerator(proposal, EXTENDED_SEQUENCE_NUMBERS);
 	while (enumerator->enumerate(enumerator, &alg, NULL))

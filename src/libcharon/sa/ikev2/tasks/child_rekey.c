@@ -191,6 +191,9 @@ METHOD(task_t, build_i, status_t,
 	{
 		proposal_t *proposal;
 		uint16_t dh_group;
+#ifdef QSKE
+		uint16_t qs_group;
+#endif
 
 		this->child_create = child_create_create(this->ike_sa,
 									config->get_ref(config), TRUE, NULL, NULL);
@@ -201,6 +204,13 @@ METHOD(task_t, build_i, status_t,
 		{	/* reuse the DH group negotiated previously */
 			this->child_create->use_dh_group(this->child_create, dh_group);
 		}
+#ifdef QSKE
+		if (proposal->get_algorithm(proposal, QUANTUM_SAFE_GROUP,
+									&qs_group, NULL))
+		{	/* reuse the QS group negotiated previously */
+			this->child_create->use_qs_group(this->child_create, qs_group);
+		}
+#endif
 	}
 	reqid = this->child_sa->get_reqid(this->child_sa);
 	this->child_create->use_reqid(this->child_create, reqid);

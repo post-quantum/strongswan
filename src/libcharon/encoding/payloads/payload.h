@@ -255,6 +255,14 @@ enum payload_type_t {
 	 */
 	PLV1_FRAGMENT = 132,
 
+#ifdef QSKE
+	/**
+	 * The quantum-safe (QS) key exchange (KE) payload containing
+	 * a quantum-safe primitive values.
+	 */
+	PLV2_QSKEY_EXCHANGE = 192,
+#endif
+
 	/**
 	 * Header has a value of PRIVATE USE space.
 	 *

@@ -21,12 +21,18 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.DataSetObserver;
+import android.graphics.Canvas;
+import android.graphics.ColorFilter;
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -54,11 +60,14 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
 import android.widget.MultiAutoCompleteTextView;
 import android.widget.RelativeLayout;
+import android.widget.SimpleAdapter;
 import android.widget.Spinner;
+import android.widget.SpinnerAdapter;
 import android.widget.Switch;
 import android.widget.TextView;
 
 import org.strongswan.android.R;
+import org.strongswan.android.data.KeyExchangeMethod;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
 import org.strongswan.android.data.VpnProfileDataSource;
@@ -82,6 +91,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 {
 	private static final int SELECT_TRUSTED_CERTIFICATE = 0;
 	private static final int SELECT_APPLICATIONS = 1;
+
+	private static final String DEFAULT_PROPOSAL="aes256gcm16-sha256-";
 
 	private VpnProfileDataSource mDataSource;
 	private Long mId;
@@ -132,10 +143,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private CheckBox mBlockIPv6;
 	private Spinner mSelectSelectedAppsHandling;
 	private RelativeLayout mSelectApps;
-	private TextInputLayoutHelper mIkeProposalWrap;
-	private EditText mIkeProposal;
-	private TextInputLayoutHelper mEspProposalWrap;
-	private EditText mEspProposal;
+	private Spinner mIkeDH, mIkeQS;
+	private Spinner mEspDH, mEspQS;
 	private TextView mProfileIdLabel;
 	private TextView mProfileId;
 
@@ -196,13 +205,6 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		mSelectSelectedAppsHandling = (Spinner)findViewById(R.id.apps_handling);
 		mSelectApps = (RelativeLayout)findViewById(R.id.select_applications);
-
-		mIkeProposal = (EditText)findViewById(R.id.ike_proposal);
-		mIkeProposalWrap = (TextInputLayoutHelper)findViewById(R.id.ike_proposal_wrap);
-		mEspProposal = (EditText)findViewById(R.id.esp_proposal);
-		mEspProposalWrap = (TextInputLayoutHelper)findViewById(R.id.esp_proposal_wrap);
-		/* make the link clickable */
-		((TextView)findViewById(R.id.proposal_intro)).setMovementMethod(LinkMovementMethod.getInstance());
 
 		mProfileIdLabel = (TextView)findViewById(R.id.profile_id_label);
 		mProfileId = (TextView)findViewById(R.id.profile_id);
@@ -350,6 +352,38 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			Bundle extras = getIntent().getExtras();
 			mId = extras == null ? null : extras.getLong(VpnProfileDataSource.KEY_ID);
 		}
+
+		mIkeDH = (Spinner)findViewById(R.id.ike_dh);
+		mIkeQS = (Spinner)findViewById(R.id.ike_qs);
+		mEspDH = (Spinner)findViewById(R.id.esp_dh);
+		mEspQS = (Spinner)findViewById(R.id.esp_qs);
+
+		ArrayAdapter<KeyExchangeMethod> adapter = new ArrayAdapter<>(this, R.layout.kem_spinner_item,
+				new KeyExchangeMethod[] {
+						KeyExchangeMethod.x25519,
+						KeyExchangeMethod.ecp256
+				});
+		mIkeDH.setAdapter(adapter);
+		mIkeQS.setAdapter(new ArrayAdapter<>(this, R.layout.kem_spinner_item,
+				new KeyExchangeMethod[] {
+					KeyExchangeMethod.qs_sikep503,
+					KeyExchangeMethod.qs_ntrukem443
+				})
+		);
+		mEspDH.setAdapter(new ArrayAdapter<>(this, R.layout.kem_spinner_item,
+				new KeyExchangeMethod[] {
+						KeyExchangeMethod.x25519,
+						KeyExchangeMethod.ecp256
+				})
+		);
+		mEspQS.setAdapter(new ArrayAdapter<>(this, R.layout.kem_spinner_item,
+				new KeyExchangeMethod[] {
+						KeyExchangeMethod.qs_newhope512cca,
+						KeyExchangeMethod.qs_kyber512,
+						KeyExchangeMethod.qs_ntrulpr4591761,
+						KeyExchangeMethod.qs_ledakem128sln02
+				})
+		);
 
 		loadProfileData(savedInstanceState);
 
@@ -673,16 +707,6 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 													 Constants.NAT_KEEPALIVE_MIN, Constants.NAT_KEEPALIVE_MAX));
 			valid = false;
 		}
-		if (!validateProposal(mIkeProposal, true))
-		{
-			mIkeProposalWrap.setError(getString(R.string.alert_text_no_proposal));
-			valid = false;
-		}
-		if (!validateProposal(mEspProposal, false))
-		{
-			mEspProposalWrap.setError(getString(R.string.alert_text_no_proposal));
-			valid = false;
-		}
 		return valid;
 	}
 
@@ -733,12 +757,37 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mProfile.setSplitTunneling(st == 0 ? null : st);
 		mProfile.setSelectedAppsHandling(mSelectedAppsHandling);
 		mProfile.setSelectedApps(mSelectedApps);
-		String ike = mIkeProposal.getText().toString().trim();
-		mProfile.setIkeProposal(ike.isEmpty() ? null : ike);
-		String esp = mEspProposal.getText().toString().trim();
-		mProfile.setEspProposal(esp.isEmpty() ? null : esp);
+		mProfile.setIkeProposal(DEFAULT_PROPOSAL + ((KeyExchangeMethod)mIkeDH.getSelectedItem()).value + "-" + ((KeyExchangeMethod)mIkeQS.getSelectedItem()).value);
+		mProfile.setEspProposal(DEFAULT_PROPOSAL + ((KeyExchangeMethod)mEspDH.getSelectedItem()).value + "-" + ((KeyExchangeMethod)mEspQS.getSelectedItem()).value);
 	}
 
+	private void setSpinnerSelectedItem(Spinner spinner, String value) {
+		for (int i=0 ; i<spinner.getAdapter().getCount() ; i++) {
+			KeyExchangeMethod method = (KeyExchangeMethod)spinner.getAdapter().getItem(i);
+			if (method.value.equals(value)) {
+				spinner.setSelection(i);
+				return;
+			}
+		}
+	}
+
+	private void updateProposalSpinner(String proposal, boolean isIke) {
+		Spinner spinnerDH = isIke ? mIkeDH : mEspDH;
+		Spinner spinnerQS = isIke ? mIkeQS : mEspQS;
+		String dh = isIke ? KeyExchangeMethod.x25519.value : KeyExchangeMethod.ecp256.value;
+		String qs = isIke ? KeyExchangeMethod.qs_ntrukem443.value : KeyExchangeMethod.qs_kyber512.value;
+		if (!TextUtils.isEmpty(proposal)) {
+			String[] transforms = proposal.split("-");
+			if (transforms.length>=3) {
+				dh = transforms[transforms.length-2];
+				qs = transforms[transforms.length-1];
+			}
+		}
+		setSpinnerSelectedItem(spinnerDH, dh);
+		setSpinnerSelectedItem(spinnerQS, qs);
+
+
+	}
 	/**
 	 * Load an existing profile if we got an ID
 	 *
@@ -748,6 +797,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	{
 		String useralias = null, local_id = null, alias = null;
 		Integer flags = null;
+
+		updateProposalSpinner(null, true);
+		updateProposalSpinner(null, false);
 
 		getSupportActionBar().setTitle(R.string.add_profile);
 		if (mId != null && mId != 0)
@@ -770,8 +822,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null && (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0);
 				mSelectedAppsHandling = mProfile.getSelectedAppsHandling();
 				mSelectedApps = mProfile.getSelectedAppsSet();
-				mIkeProposal.setText(mProfile.getIkeProposal());
-				mEspProposal.setText(mProfile.getEspProposal());
+				updateProposalSpinner(mProfile.getIkeProposal(), true);
+				updateProposalSpinner(mProfile.getEspProposal(), false);
 				mProfileId.setText(mProfile.getUUID().toString());
 				flags = mProfile.getFlags();
 				useralias = mProfile.getUserCertificateAlias();

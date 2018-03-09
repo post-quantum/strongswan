@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2018 Post-Quantum
  * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -15,6 +16,9 @@
  * for more details.
  */
 
+#define _GNU_SOURCE             /* See feature_test_macros(7) */
+#include <pthread.h>
+
 #include "ike_init.h"
 
 #include <string.h>
@@ -27,6 +31,7 @@
 #include <crypto/hashers/hash_algorithm_set.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
+#include <encoding/payloads/qske_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 
 /** maximum retries to do with cookies/other dh groups */
@@ -73,6 +78,28 @@ struct private_ike_init_t {
 	 * Keymat derivation (from IKE_SA)
 	 */
 	keymat_v2_t *keymat;
+
+#ifdef QSKE
+	/**
+	 * Quantum-safe group
+	 */
+	quantum_safe_group_t qs_group;
+
+	/**
+	 * Quantum safe key exchange interface
+	 */
+	quantum_safe_t *qs;
+
+	/**
+	 * Applying qs public value failed?
+	 */
+	bool qs_failed;
+
+	/**
+	 * Keymat derivation (from IKE_SA)
+	 */
+	keymat_v2_t *qs_keymat;
+#endif
 
 	/**
 	 * nonce chosen by us
@@ -377,8 +404,24 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		message->add_payload(message, (payload_t*)nonce_payload);
 		message->add_payload(message, (payload_t*)ke_payload);
 	}
-	else
+
+#ifdef QSKE
+	/* quantum-safe key exchange, if PFS enabled */
+	if (this->qs)
 	{
+		qske_payload_t* payload = qske_payload_create_from_qs(
+							PLV2_QSKEY_EXCHANGE, this->qs);
+		if (!payload)
+		{
+			DBG1(DBG_IKE, "creating QSKE payload failed");
+			return FALSE;
+		}
+		message->add_payload(message, (payload_t*)payload);
+	}
+#endif
+
+	if (!this->old_sa)
+	{	/* payload order differs if we are rekeying */
 		message->add_payload(message, (payload_t*)ke_payload);
 		message->add_payload(message, (payload_t*)nonce_payload);
 	}
@@ -506,6 +549,9 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 	enumerator_t *enumerator;
 	payload_t *payload;
 	ke_payload_t *ke_payload = NULL;
+#ifdef QSKE
+	qske_payload_t *qske_payload = NULL;
+#endif
 
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
@@ -524,6 +570,16 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
 				break;
 			}
+#ifdef QSKE
+			case PLV2_QSKEY_EXCHANGE:
+			{
+				qske_payload = (qske_payload_t*)payload;
+
+				this->qs_group = qske_payload->get_qs_group_number(
+										qske_payload);
+				break;
+			}
+#endif
 			case PLV2_NONCE:
 			{
 				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
@@ -593,25 +649,56 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 	if (this->proposal)
 	{
 		this->ike_sa->set_proposal(this->ike_sa, this->proposal);
-	}
 
-	if (ke_payload && this->proposal &&
-		this->proposal->has_dh_group(this->proposal, this->dh_group))
-	{
-		if (!this->initiator)
+		if (ke_payload &&
+			this->proposal->has_dh_group(this->proposal, this->dh_group))
 		{
-			this->dh = this->keymat->keymat.create_dh(
-								&this->keymat->keymat, this->dh_group);
-		}
+			if (!this->initiator)
+			{
+				this->dh = this->keymat->keymat.create_dh(
+									&this->keymat->keymat, this->dh_group);
+			}
 		else if (this->dh)
 		{
 			this->dh_failed = this->dh->get_dh_group(this->dh) != this->dh_group;
 		}
 		if (this->dh && !this->dh_failed)
-		{
-			this->dh_failed = !this->dh->set_other_public_value(this->dh,
-								ke_payload->get_key_exchange_data(ke_payload));
+			{
+				this->dh_failed = !this->dh->set_other_public_value(this->dh,
+									ke_payload->get_key_exchange_data(ke_payload));
+			}
 		}
+#ifdef QSKE
+
+		// If selected proposal has no QS DH component, we don't care about the QSKE payload
+		if (this->proposal->get_qs_group(this->proposal) == QS_NONE)
+		{
+			this->qs_group = QS_NONE;
+            if (this->qs)
+            {
+                this->qs->destroy(this->qs);
+                this->qs = NULL;
+            }
+		}
+		if (this->qs_group != QS_NONE)
+		{
+			if (qske_payload &&
+				this->proposal->has_qs_group(this->proposal, this->qs_group))
+			{
+				if (!this->initiator)
+				{
+					this->qs = this->qs_keymat->keymat.create_qs(
+										&this->qs_keymat->keymat, this->qs_group);
+				}
+				if (this->qs)
+				{
+					this->qs_failed = !this->qs->set_other_public_value(
+								this->qs,
+								qske_payload->get_key_exchange_data(qske_payload));
+				}
+			}
+		}
+#endif
 	}
 }
 
@@ -634,37 +721,28 @@ METHOD(task_t, build_i, status_t,
 		return FAILED;
 	}
 
-	/* if we are retrying after an INVALID_KE_PAYLOAD we already have one */
-	if (!this->dh)
-	{
-		if (this->old_sa && lib->settings->get_bool(lib->settings,
-								"%s.prefer_previous_dh_group", TRUE, lib->ns))
-		{	/* reuse the DH group we used for the old IKE_SA when rekeying */
-			proposal_t *proposal;
-			uint16_t dh_group;
+	// If we do not yet have the DH interface we'd better create it
+	if (!this->dh) {
 
-			proposal = this->old_sa->get_proposal(this->old_sa);
-			if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
-										&dh_group, NULL))
-			{
+		// Default to the configured DH group
+		this->dh_group = this->config->get_dh_group(this->config);
+
+		// If there is a previous IKE_SA then reuse it's DH group
+		if (this->old_sa && lib->settings->get_bool(lib->settings,
+		    "%s.prefer_previous_dh_group", TRUE, lib->ns)) {
+			uint16_t dh_group;
+			proposal_t* proposal = this->old_sa->get_proposal(this->old_sa);
+			if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL)) {
 				this->dh_group = dh_group;
 			}
-			else
-			{	/* this shouldn't happen, but let's be safe */
-				this->dh_group = ike_cfg->get_dh_group(ike_cfg);
-			}
 		}
-		else
-		{
-			this->dh_group = ike_cfg->get_dh_group(ike_cfg);
-		}
-		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
-												  this->dh_group);
-		if (!this->dh)
-		{
+
+		// Create the DH interface for the chosen DH group
+		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat, this->dh_group);
+		if (!this->dh) {
 			DBG1(DBG_IKE, "configured DH group %N not supported",
-				diffie_hellman_group_names, this->dh_group);
-			return FAILED;
+				    diffie_hellman_group_names, this->dh_group);
+			 return FAILED;
 		}
 	}
 	else if (this->dh->get_dh_group(this->dh) != this->dh_group)
@@ -675,10 +753,35 @@ METHOD(task_t, build_i, status_t,
 		if (!this->dh)
 		{
 			DBG1(DBG_IKE, "requested DH group %N not supported",
-				 diffie_hellman_group_names, this->dh_group);
-			return FAILED;
+				diffie_hellman_group_names, this->dh_group);
+				return FAILED;
 		}
 	}
+
+#ifdef QSKE
+	if (!this->qs)
+	{
+		this->qs_group = this->config->get_qs_group(this->config);
+		if (this->qs_group != QS_NONE)
+		{
+			this->qs = this->qs_keymat->keymat.create_qs(
+									&this->qs_keymat->keymat, this->qs_group);
+			if (!this->qs)
+			{
+				DBG1(DBG_IKE, "configured QS group %N not supported",
+					quantum_safe_group_names, this->qs_group);
+				return FAILED;
+			}
+		}
+	}
+#endif
+
+	if (this->dh_group == MODP_NONE)
+	{
+		DBG1(DBG_IKE, "no key exchange algorithm specified!");
+		return FAILED;
+	}
+
 
 	/* generate nonce only when we are trying the first time */
 	if (this->my_nonce.ptr == NULL)
@@ -741,6 +844,7 @@ METHOD(task_t, process_r,  status_t,
 	return NEED_MORE;
 }
 
+
 /**
  * Derive the keymat for the IKE_SA
  */
@@ -751,6 +855,19 @@ static bool derive_keys(private_ike_init_t *this,
 	pseudo_random_function_t prf_alg = PRF_UNDEFINED;
 	chunk_t skd = chunk_empty;
 	ike_sa_id_t *id;
+
+#if defined(PQPERF)
+	// Ensure we're always on CPU0
+	cpu_set_t cpuset;
+	CPU_ZERO(&cpuset);
+	CPU_SET(0, &cpuset);
+	pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+	// Get current time in milliseconds
+    struct timespec res, start, end;
+    clock_getres(CLOCK_MONOTONIC_RAW, &res);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+    double start_in_mill = (start.tv_sec) * 1000 + (start.tv_nsec) / 1000000.0 ;
+#endif
 
 	id = this->ike_sa->get_id(this->ike_sa);
 	if (this->old_sa)
@@ -768,12 +885,21 @@ static bool derive_keys(private_ike_init_t *this,
 		}
 	}
 	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
+#ifdef QSKE
+                                       this->qs,
+#endif
 									   nonce_i, nonce_r, id, prf_alg, skd))
 	{
 		return FALSE;
 	}
 	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, chunk_empty,
 						  nonce_i, nonce_r, this->old_sa, NULL, AUTH_NONE);
+
+#if defined(PQPERF)
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+    double end_in_mill = (end.tv_sec) * 1000 + (end.tv_nsec) / 1000000.0 ;
+    printf("PQPERF: derive_keys took %f ms\n", (float)(end_in_mill-start_in_mill));
+#endif
 	return TRUE;
 }
 
@@ -807,11 +933,13 @@ METHOD(task_t, build_r, status_t,
 		return FAILED;
 	}
 
+	// If we don't have a DH set OR the proposal specifies a different DH group...
+    bool dh_mismatch = false;
 	if (this->dh == NULL ||
 		!this->proposal->has_dh_group(this->proposal, this->dh_group))
 	{
 		uint16_t group;
-
+        dh_mismatch = true;
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
 										  &group, NULL))
 		{
@@ -828,8 +956,40 @@ METHOD(task_t, build_r, status_t,
 			DBG1(DBG_IKE, "no acceptable proposal found");
 			message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		}
-		return FAILED;
 	}
+
+#ifdef QSKE
+    bool qs_mismatch = false;
+    if (this->qs_group != QS_NONE)
+	{
+		if (this->qs == NULL ||
+			!this->proposal->has_qs_group(this->proposal, this->qs_group))
+		{
+			uint16_t group;
+            qs_mismatch = true;
+			if (this->proposal->get_algorithm(this->proposal, QUANTUM_SAFE_GROUP,
+											&group, NULL))
+			{
+				DBG1(DBG_IKE, "QS group %N inacceptable, requesting %N",
+					quantum_safe_group_names, this->qs_group,
+					quantum_safe_group_names, group);
+				this->qs_group = group;
+				group = htons(group);
+				message->add_notify(message, FALSE, INVALID_QSKE_PAYLOAD,
+									chunk_from_thing(group));
+			}
+			else
+			{
+				DBG1(DBG_IKE, "no acceptable proposal found");
+				message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
+			}
+		}
+    }
+#endif
+    if (dh_mismatch)
+    {
+        return FAILED;
+    }
 
 	if (this->dh_failed)
 	{
@@ -837,6 +997,19 @@ METHOD(task_t, build_r, status_t,
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
+
+#ifdef QSKE
+    if (qs_mismatch)
+    {
+        return FAILED;
+    }
+    if (this->qs_failed)
+    {
+        DBG1(DBG_IKE, "applying QS public value failed");
+        message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
+        return FAILED;
+    }
+#endif
 
 	if (!derive_keys(this, this->other_nonce, this->my_nonce))
 	{
@@ -941,6 +1114,8 @@ METHOD(task_t, process_i, status_t,
 	enumerator_t *enumerator;
 	payload_t *payload;
 
+	bool invalid_ke_or_qske = false;
+
 	/* check for erroneous notifies */
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
@@ -954,6 +1129,7 @@ METHOD(task_t, process_i, status_t,
 			{
 				case INVALID_KE_PAYLOAD:
 				{
+					invalid_ke_or_qske = true;
 					chunk_t data;
 					diffie_hellman_group_t bad_group;
 
@@ -963,16 +1139,24 @@ METHOD(task_t, process_i, status_t,
 					DBG1(DBG_IKE, "peer didn't accept DH group %N, "
 						 "it requested %N", diffie_hellman_group_names,
 						 bad_group, diffie_hellman_group_names, this->dh_group);
-
-					if (this->old_sa == NULL)
-					{	/* reset the IKE_SA if we are not rekeying */
-						this->ike_sa->reset(this->ike_sa, FALSE);
-					}
-
-					enumerator->destroy(enumerator);
-					this->retry++;
-					return NEED_MORE;
+					break;
 				}
+#ifdef QSKE
+				case INVALID_QSKE_PAYLOAD:
+				{
+					invalid_ke_or_qske = true;
+					chunk_t data;
+					quantum_safe_group_t bad_group;
+
+					bad_group = this->qs_group;
+					data = notify->get_notification_data(notify);
+					this->qs_group = ntohs(*((uint16_t*)data.ptr));
+					DBG1(DBG_IKE, "peer didn't accept QS group %N, "
+						 "it requested %N", quantum_safe_group_names,
+						 bad_group, quantum_safe_group_names, this->qs_group);
+					break;
+				}
+#endif
 				case NAT_DETECTION_SOURCE_IP:
 				case NAT_DETECTION_DESTINATION_IP:
 					/* skip, handled in ike_natd_t */
@@ -1030,7 +1214,19 @@ METHOD(task_t, process_i, status_t,
 			}
 		}
 	}
+
 	enumerator->destroy(enumerator);
+
+	if (invalid_ke_or_qske)
+	{
+		if (this->old_sa == NULL)
+		{    /* reset the IKE_SA if we are not rekeying */
+			this->ike_sa->reset(this->ike_sa, FALSE);
+		}
+		this->retry++;
+		return NEED_MORE;
+	}
+
 
 	process_payloads(this, message);
 
@@ -1055,6 +1251,24 @@ METHOD(task_t, process_i, status_t,
 		return FAILED;
 	}
 
+#ifdef QSKE
+	if (this->qs_group != QS_NONE)
+	{
+		if (this->qs == NULL ||
+			!this->proposal->has_qs_group(this->proposal, this->qs_group))
+		{
+			DBG1(DBG_IKE, "peer QS group selection invalid");
+			return FAILED;
+		}
+
+		if (this->qs_failed)
+		{
+			DBG1(DBG_IKE, "applying QS public value failed");
+			return FAILED;
+		}
+	}
+#endif
+
 	if (!derive_keys(this, this->my_nonce, this->other_nonce))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
@@ -1077,14 +1291,31 @@ METHOD(task_t, migrate, void,
 
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
+#ifdef QSKE
+	this->qs_keymat = (keymat_v2_t*)ike_sa->get_qs_keymat(ike_sa);
+#endif
 	this->proposal = NULL;
 	this->dh_failed = FALSE;
+#ifdef QSKE
+	this->qs_failed = FALSE;
+	if (this->qs &&
+		this->qs->get_qs_group(this->qs) != this->qs_group)
+	{       /* reset QS value only if group changed (INVALID_QSKE_PAYLOAD) */
+		this->qs->destroy(this->qs);
+		this->qs = this->qs_keymat->keymat.create_qs(
+												&this->qs_keymat->keymat,
+												this->qs_group);
+	}
+#endif
 }
 
 METHOD(task_t, destroy, void,
 	private_ike_init_t *this)
 {
 	DESTROY_IF(this->dh);
+#ifdef QSKE
+	DESTROY_IF(this->qs);
+#endif
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->nonceg);
 	chunk_free(&this->my_nonce);
@@ -1127,6 +1358,10 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.initiator = initiator,
 		.dh_group = MODP_NONE,
 		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
+#ifdef QSKE
+		.qs_group = QS_NONE,
+		.qs_keymat = (keymat_v2_t*)ike_sa->get_qs_keymat(ike_sa),
+#endif
 		.old_sa = old_sa,
 		.signature_authentication = lib->settings->get_bool(lib->settings,
 								"%s.signature_authentication", TRUE, lib->ns),
