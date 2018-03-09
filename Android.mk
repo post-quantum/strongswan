@@ -18,7 +18,7 @@ include $(CLEAR_VARS)
 # also these plugins are loaded by default (if not changed in strongswan.conf)
 strongswan_CHARON_PLUGINS := android-log openssl fips-prf random nonce pubkey \
 	pkcs1 pkcs8 pem xcbc hmac kernel-netlink socket-default android-dns \
-	stroke eap-identity eap-mschapv2 eap-md5 eap-gtc
+	stroke eap-identity eap-mschapv2 eap-md5 eap-gtc sha3 chapoly mgf1 newhope ntru
 
 ifneq ($(strongswan_BUILD_SCEPCLIENT),)
 # plugins loaded by scepclient
@@ -84,7 +84,8 @@ strongswan_CFLAGS := \
 	-DIPSEC_CONFDIR=\"$(strongswan_CONFDIR)\" \
 	-DSTRONGSWAN_CONF=\"$(strongswan_STRONGSWAN_CONF)\" \
 	-DDEV_RANDOM=\"/dev/random\" \
-	-DDEV_URANDOM=\"/dev/urandom\"
+	-DDEV_URANDOM=\"/dev/urandom\" \
+	-DQSKE
 
 # only for Android 2.0+
 strongswan_CFLAGS += \

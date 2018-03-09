@@ -156,6 +156,14 @@ enum ha_message_attribute_t {
 	HA_PSK,
 	/** chunk_t, IV for next IKEv1 message */
 	HA_IV,
+#ifdef QSKE
+	/** uint16_t, QS group */
+	HA_ALG_QS,
+	/** chunk_t, own QS public value */
+	HA_LOCAL_QS,
+	/** chunk_t, remote QS public value */
+	HA_REMOTE_QS,
+#endif
 };
 
 /**

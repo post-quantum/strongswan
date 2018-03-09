@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.6.2])
+AC_INIT([strongSwan],[5.6.2-nistpqc])
 AM_INIT_AUTOMAKE(m4_esyscmd([
 	echo tar-ustar
 	echo subdir-objects
@@ -141,8 +141,10 @@ ARG_ENABL_SET([md4],            [enable MD4 software implementation plugin.])
 ARG_DISBL_SET([md5],            [disable MD5 software implementation plugin.])
 ARG_ENABL_SET([mgf1],           [enable the MGF1 software implementation plugin.])
 ARG_ENABL_SET([newhope],        [enable New Hope crypto plugin.])
+ARG_DISBL_SET([nistpqc],        [disable NIST PQC crypto plugin.])
 ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
 ARG_ENABL_SET([ntru],           [enables the NTRU crypto plugin.])
+ARG_ENABL_SET([hybrid-quantum-safe], [enable hybrid quantum-safe key-exchange.])
 ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
 ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
 ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
@@ -1154,6 +1156,11 @@ if test x$gcrypt = xtrue; then
 	)
 fi
 
+if test x$nistpqc = xtrue; then
+    AC_CHECK_LIB([nistpqc],[nistpqc_init],[LIBS="$LIBS"],[AC_MSG_ERROR([nistpqc library not found])],[$OPENSSL_LIB])
+    AC_CHECK_HEADER([nistpqc/api.h],,[AC_MSG_ERROR([NIST PQC header nistpqc/api.h not found!])])
+fi
+
 if test x$uci = xtrue; then
 	AC_CHECK_LIB([uci],[uci_alloc_context],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])],[])
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
@@ -1419,6 +1426,7 @@ ADD_PLUGIN([ccm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([gcm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ntru],                 [s charon scripts nm cmd])
 ADD_PLUGIN([newhope],              [s charon scripts nm cmd])
+ADD_PLUGIN([nistpqc],              [s charon scripts nm cmd])
 ADD_PLUGIN([bliss],                [s charon pki scripts nm cmd])
 ADD_PLUGIN([curl],                 [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([files],                [s charon scepclient pki scripts nm cmd])
@@ -1584,7 +1592,9 @@ AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
 AM_CONDITIONAL(USE_AF_ALG, test x$af_alg = xtrue)
 AM_CONDITIONAL(USE_NTRU, test x$ntru = xtrue)
 AM_CONDITIONAL(USE_NEWHOPE, test x$newhope = xtrue)
+AM_CONDITIONAL(QSKE, test x$hybrid_quantum_safe = xtrue)
 AM_CONDITIONAL(USE_BLISS, test x$bliss = xtrue)
+AM_CONDITIONAL(USE_NISTPQC, test x$nistpqc = xtrue)
 
 #  charon plugins
 # ----------------
@@ -1769,6 +1779,9 @@ fi
 if test x$imc_swima = xtrue -o x$imv_swima = xtrue -o x$imv_swid = xtrue ; then
 	AC_DEFINE([USE_JSON], [], [build code for JSON])
 fi
+if test x$hybrid_quantum_safe = xtrue; then
+	AC_DEFINE([QSKE], [], [support for hybrid quantum-safe key exchange])
+fi
 
 # ====================================================
 #  options for enabled modules (see conf/Makefile.am)
@@ -1867,6 +1880,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/bliss/tests/Makefile
 	src/libstrongswan/plugins/newhope/Makefile
 	src/libstrongswan/plugins/newhope/tests/Makefile
+	src/libstrongswan/plugins/nistpqc/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libstrongswan/tests/Makefile
 	src/libipsec/Makefile

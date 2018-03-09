@@ -34,6 +34,7 @@ encoding/payloads/encrypted_fragment_payload.h \
 encoding/payloads/id_payload.c encoding/payloads/id_payload.h \
 encoding/payloads/ike_header.c encoding/payloads/ike_header.h \
 encoding/payloads/ke_payload.c  encoding/payloads/ke_payload.h \
+encoding/payloads/qske_payload.c  encoding/payloads/qske_payload.h \
 encoding/payloads/nonce_payload.c encoding/payloads/nonce_payload.h \
 encoding/payloads/notify_payload.c encoding/payloads/notify_payload.h \
 encoding/payloads/payload.c encoding/payloads/payload.h \
@@ -241,6 +242,13 @@ LOCAL_SRC_FILES += $(call add_plugin, stroke)
 ifneq ($(call plugin_enabled, stroke),)
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../stroke/
 endif
+
+LOCAL_SRC_FILES += $(call add_plugin, sha3)
+LOCAL_SRC_FILES += $(call add_plugin, chapoly)
+LOCAL_SRC_FILES += $(call add_plugin, mgf1)
+LOCAL_SRC_FILES += $(call add_plugin, newhope)
+LOCAL_SRC_FILES += $(call add_plugin, ntru)
+LOCAL_SRC_FILES += $(call add_plugin, nistpqc)
 
 # build libcharon --------------------------------------------------------------
 

@@ -1,3 +1,14 @@
+# Post-Quantum Extensions
+
+This fork of strongSwan includes a non-standard extension to IKEv2 for
+quantum-safe key exchange. It also includes support for [the NISTPQC cipher library](https://github.com/post-quantum/nistpqc)
+which must be built separately before being linked into strongSwan binaries.
+
+The documentation for these extensions has been provided in a separate channel. The
+standard strongSwan README text begins below this line.
+
+---
+
 # strongSwan Configuration #
 
 ## Overview ##

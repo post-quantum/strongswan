@@ -196,6 +196,15 @@ struct child_cfg_t {
 	 */
 	diffie_hellman_group_t (*get_dh_group)(child_cfg_t *this);
 
+#ifdef QSKE
+	/**
+	 * Get the QS group to use for CHILD_SA setup.
+	 *
+	 * @return				qs group to use
+	 */
+	quantum_safe_group_t (*get_qs_group)(child_cfg_t *this);
+#endif
+
 	/**
 	 * Get the inactivity timeout value.
 	 *

@@ -915,6 +915,15 @@ struct ike_sa_t {
 	 */
 	keymat_t* (*get_keymat)(ike_sa_t *this);
 
+#ifdef QSKE
+	/**
+	 * Get the quantum-safe keying material of this IKE_SA.
+	 *
+	 * @return				per IKE_SA keymat instance
+	 */
+	keymat_t* (*get_qs_keymat)(ike_sa_t *this);
+#endif
+
 	/**
 	 * Associates a child SA to this IKE SA
 	 *

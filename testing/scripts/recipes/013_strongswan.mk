@@ -106,7 +106,11 @@ CONFIG_OPTS = \
 	--enable-newhope \
 	--enable-systemd \
 	--enable-counters \
-	--enable-save-keys
+	--enable-save-keys \
+	--enable-md5 \
+	--enable-nistpqc \
+	--enable-hybrid-quantum-safe
+
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 

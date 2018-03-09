@@ -41,7 +41,6 @@ typedef struct bus_t bus_t;
 #undef DBG2
 #undef DBG3
 #undef DBG4
-
 #ifndef DEBUG_LEVEL
 # define DEBUG_LEVEL 4
 #endif /* DEBUG_LEVEL */

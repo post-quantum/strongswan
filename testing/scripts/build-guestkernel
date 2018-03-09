@@ -36,7 +36,10 @@ then
 	if [ $KERNELPATCH ]
 	then
 		log_action "Applying kernel patch"
-		bzcat $KERNELPATCH | patch -d $KERNELDIR -p1 >>$LOGFILE 2>&1
+		# As of version 5.6.2, the given $KERNELPATCH file if applied directly, 
+		# will cause a patch failure. The following patch will fix this issue.
+		#bzcat $KERNELPATCH | patch -d $KERNELDIR -p1 >>$LOGFILE 2>&1
+		bzcat $KERNELPATCH | sed -e 's/@@ -819,6 +1075,11 @@/@@ -819,7 +1075,12 @@/' | sed '455i__TAB__WARN_ON_ONCE(!list_empty(&cn->configs));' | sed -e 's/__TAB__WARN_ON_ONCE/ \tWARN_ON_ONCE/' | patch -d $KERNELDIR -p1 >>$LOGFILE 2>&1
 		log_status $?
 		[ $? -eq 0 ] || exit 1
 	fi
