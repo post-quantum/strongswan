@@ -23,13 +23,17 @@ ENUM_BEGIN(transform_type_names, ENCRYPTION_ALGORITHM, EXTENDED_SEQUENCE_NUMBERS
 	"INTEGRITY_ALGORITHM",
 	"DIFFIE_HELLMAN_GROUP",
 	"EXTENDED_SEQUENCE_NUMBERS");
+ENUM_NEXT(transform_type_names, QUANTUM_SAFE_GROUP, QUANTUM_SAFE_GROUP, EXTENDED_SEQUENCE_NUMBERS,
+	 "QUANTUM_SAFE_GROUP");
 ENUM_NEXT(transform_type_names, HASH_ALGORITHM, EXTENDED_OUTPUT_FUNCTION,
-		  EXTENDED_SEQUENCE_NUMBERS,
+		  QUANTUM_SAFE_GROUP,
 	"HASH_ALGORITHM",
 	"RANDOM_NUMBER_GENERATOR",
 	"AEAD_ALGORITHM",
 	"COMPRESSION_ALGORITHM",
-	"EXTENDED OUTPUT FUNCTION");
+	"EXTENDED_OUTPUT_FUNCTION");
+
+
 ENUM_END(transform_type_names, EXTENDED_OUTPUT_FUNCTION);
 
 
@@ -59,6 +63,10 @@ enum_name_t* transform_get_enum_names(transform_type_t type)
 			return integrity_algorithm_names;
 		case DIFFIE_HELLMAN_GROUP:
 			return diffie_hellman_group_names;
+#ifdef QSKE
+		case QUANTUM_SAFE_GROUP:
+			return quantum_safe_group_names;
+#endif
 		case EXTENDED_SEQUENCE_NUMBERS:
 			return extended_sequence_numbers_names;
 		case EXTENDED_OUTPUT_FUNCTION:
