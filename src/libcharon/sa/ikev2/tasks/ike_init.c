@@ -725,7 +725,7 @@ METHOD(task_t, build_i, status_t,
 	if (!this->dh) {
 
 		// Default to the configured DH group
-		this->dh_group = this->config->get_dh_group(this->config);
+		this->dh_group = ike_cfg->get_dh_group(ike_cfg);
 
 		// If there is a previous IKE_SA then reuse it's DH group
 		if (this->old_sa && lib->settings->get_bool(lib->settings,
@@ -761,7 +761,7 @@ METHOD(task_t, build_i, status_t,
 #ifdef QSKE
 	if (!this->qs)
 	{
-		this->qs_group = this->config->get_qs_group(this->config);
+		this->qs_group = ike_cfg->get_qs_group(ike_cfg);
 		if (this->qs_group != QS_NONE)
 		{
 			this->qs = this->qs_keymat->keymat.create_qs(
