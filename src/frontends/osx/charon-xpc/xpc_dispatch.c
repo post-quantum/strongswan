@@ -70,10 +70,22 @@ static void get_version(private_xpc_dispatch_t *this,
 	xpc_dictionary_set_string(reply, "version", PACKAGE_VERSION);
 }
 
+static proposal_t* parse_proposal(protocol_id_t proto, char *s)
+{
+    proposal_t* proposal = proposal_create_from_string(proto, s);
+    if (!proposal) {
+        DBG1(DBG_CFG, "invalid %N proposal '%s', falling back to defaults",
+             protocol_id_names, proto, s);
+    }
+    return proposal;
+}
+
+
+
 /**
  * Create peer config with associated ike config
  */
-static peer_cfg_t* create_peer_cfg(char *name, char *host)
+static peer_cfg_t* create_peer_cfg(char *name, char *host, char* ike)
 {
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
@@ -95,8 +107,14 @@ static peer_cfg_t* create_peer_cfg(char *name, char *host)
 	}
 	ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE, "0.0.0.0", local_port,
 							 host, remote_port, FRAGMENTATION_NO, 0);
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
+    if (ike) {
+        ike_cfg->add_proposal(ike_cfg, parse_proposal(PROTO_IKE, ike));
+    } else {
+        ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE,
+            "aes256gcm16-sha256-x25519-qs_ntrukem"));
+        ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+        ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
+    }
 	peer_cfg = peer_cfg_create(name, ike_cfg, &peer);
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
 
@@ -124,7 +142,7 @@ static void add_auth_cfg(peer_cfg_t *peer_cfg, bool local,
 /**
  * Attach child config to peer config
  */
-static child_cfg_t* create_child_cfg(char *name)
+static child_cfg_t* create_child_cfg(char *name, char* esp)
 {
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
@@ -140,11 +158,15 @@ static child_cfg_t* create_child_cfg(char *name)
 	};
 
 	child_cfg = child_cfg_create(name, &child);
-	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-										"aes128gcm8-aes128gcm12-aes128gcm16-"
-										"aes256gcm8-aes256gcm12-aes256gcm16"));
-	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
+    if (esp) {
+        child_cfg->add_proposal(child_cfg, parse_proposal(PROTO_ESP, esp));
+    } else {
+        child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+                                            "aes128gcm8-aes128gcm12-aes128gcm16-"
+                                            "aes256gcm8-aes256gcm12-aes256gcm16"));
+        child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+        child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
+    }
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
@@ -176,7 +198,7 @@ void start_connection(private_xpc_dispatch_t *this,
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
-	char *name, *id, *host;
+	char *name, *id, *host, *ike, *esp;
 	bool success = FALSE;
 	xpc_endpoint_t endpoint;
 	xpc_connection_t channel;
@@ -185,17 +207,19 @@ void start_connection(private_xpc_dispatch_t *this,
 	name = (char*)xpc_dictionary_get_string(request, "name");
 	host = (char*)xpc_dictionary_get_string(request, "host");
 	id = (char*)xpc_dictionary_get_string(request, "id");
+    ike = (char*)xpc_dictionary_get_string(request, "ike");
+    esp = (char*)xpc_dictionary_get_string(request, "esp");
 	endpoint = xpc_dictionary_get_value(request, "channel");
 	channel = xpc_connection_create_from_endpoint(endpoint);
 
 	if (name && id && host && channel)
 	{
-		peer_cfg = create_peer_cfg(name, host);
+		peer_cfg = create_peer_cfg(name, host, ike);
 
 		add_auth_cfg(peer_cfg, TRUE, id, AUTH_CLASS_EAP);
 		add_auth_cfg(peer_cfg, FALSE, host, AUTH_CLASS_ANY);
 
-		child_cfg = create_child_cfg(name);
+		child_cfg = create_child_cfg(name, esp);
 		peer_cfg->add_child_cfg(peer_cfg, child_cfg->get_ref(child_cfg));
 
 		if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,

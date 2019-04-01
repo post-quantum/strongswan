@@ -12,7 +12,7 @@
 	<string>1.0</string>
 	<key>SMAuthorizedClients</key>
 	<array>
-		<string>identifier org.strongswan.osx and certificate leaf[subject.CN] = "Developer ID Application: revosec AG (SRXT3TB2PY)"</string>
+		<string>identifier "org.strongswan.osx" and anchor apple generic and certificate leaf[subject.CN] = "Mac Developer: Reuben Scratton (4BYV5V6ZBL)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
 	</array>
 </dict>
 </plist>

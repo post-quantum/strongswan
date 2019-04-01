@@ -37,7 +37,7 @@
 	<key>SMPrivilegedExecutables</key>
 	<dict>
 		<key>org.strongswan.charon-xpc</key>
-		<string>identifier "org.strongswan.charon-xpc" and certificate leaf[subject.CN] = "Developer ID Application: revosec AG (SRXT3TB2PY)"</string>
+		<string>identifier "org.strongswan.charon-xpc" and anchor apple generic and certificate leaf[subject.CN] = "Mac Developer: Reuben Scratton (4BYV5V6ZBL)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
 	</dict>
 </dict>
 </plist>

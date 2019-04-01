@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1B35C359224CFB4500CA831C /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1B35C358224CFB4500CA831C /* libcrypto.a */; };
+		1B35C35B224CFCF800CA831C /* libnistpqc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1B35C35A224CFCF800CA831C /* libnistpqc.a */; };
 		5B04A712174558F100A13BDC /* icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 5B04A711174558F100A13BDC /* icon.png */; };
 		5B04A7211747800F00A13BDC /* icon-alt.png in Resources */ = {isa = PBXBuildFile; fileRef = 5B04A7201747800F00A13BDC /* icon-alt.png */; };
 		5B313F9A17A93D590055C86A /* icon-large.icns in Resources */ = {isa = PBXBuildFile; fileRef = 5B313F9917A93D590055C86A /* icon-large.icns */; };
@@ -63,6 +65,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1B35C358224CFB4500CA831C /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = ../../../../../../usr/local/lib/libcrypto.a; sourceTree = "<group>"; };
+		1B35C35A224CFCF800CA831C /* libnistpqc.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libnistpqc.a; path = ../../../../../../usr/local/lib/libnistpqc.a; sourceTree = "<group>"; };
 		5B04A711174558F100A13BDC /* icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon.png; sourceTree = "<group>"; };
 		5B04A7201747800F00A13BDC /* icon-alt.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-alt.png"; sourceTree = "<group>"; };
 		5B313F9917A93D590055C86A /* icon-large.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = "icon-large.icns"; sourceTree = "<group>"; };
@@ -122,6 +126,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1B35C35B224CFCF800CA831C /* libnistpqc.a in Frameworks */,
+				1B35C359224CFB4500CA831C /* libcrypto.a in Frameworks */,
 				5BF60F631743C57500E5D608 /* SystemConfiguration.framework in Frameworks */,
 				5BF60F31173405A000E5D608 /* CoreFoundation.framework in Frameworks */,
 				5BF60F33173405AC00E5D608 /* Security.framework in Frameworks */,
@@ -154,6 +160,8 @@
 		5BD1CCAF1726DB0100587077 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1B35C35A224CFCF800CA831C /* libnistpqc.a */,
+				1B35C358224CFB4500CA831C /* libcrypto.a */,
 				5BF60F621743C57500E5D608 /* SystemConfiguration.framework */,
 				5BD1CCF21727DE3E00587077 /* Security.framework */,
 				5BD1CCEC1727D7AF00587077 /* ServiceManagement.framework */,
@@ -257,12 +265,23 @@
 			attributes = {
 				LastUpgradeCheck = 0620;
 				ORGANIZATIONNAME = "revosec AG";
+				TargetAttributes = {
+					5BD1CCAB1726DB0100587077 = {
+						DevelopmentTeam = BBFLXHGDRV;
+						ProvisioningStyle = Manual;
+					};
+					5BD1CCD01726DB4000587077 = {
+						DevelopmentTeam = BBFLXHGDRV;
+						ProvisioningStyle = Manual;
+					};
+				};
 			};
 			buildConfigurationList = 5BD1CCA61726DB0100587077 /* Build configuration list for PBXProject "strongSwan" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 5BD1CCA11726DB0100587077;
@@ -437,14 +456,17 @@
 		5BD1CCCB1726DB0200587077 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = BBFLXHGDRV;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "strongSwan/strongSwan-Prefix.pch";
 				INFOPLIST_FILE = "strongSwan/strongSwan-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				WRAPPER_EXTENSION = app;
 			};
@@ -453,15 +475,18 @@
 		5BD1CCCC1726DB0200587077 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
+				DEVELOPMENT_TEAM = BBFLXHGDRV;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "strongSwan/strongSwan-Prefix.pch";
 				INFOPLIST_FILE = "strongSwan/strongSwan-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				WRAPPER_EXTENSION = app;
 			};
@@ -470,7 +495,9 @@
 		5BD1CCDB1726DB4000587077 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = BBFLXHGDRV;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
 				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
@@ -485,14 +512,14 @@
 					/usr/lib,
 					../../libstrongswan/.libs,
 					../../libcharon/.libs,
+					/usr/local/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				OTHER_CFLAGS = (
 					"-include",
 					../../../config.h,
 				);
 				OTHER_LDFLAGS = (
-					"-lcrypto",
 					"-force_load",
 					../../libstrongswan/.libs/libstrongswan.a,
 					"-force_load",
@@ -510,6 +537,7 @@
 				);
 				PRODUCT_NAME = "org.strongswan.charon-xpc";
 				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				STRIP_STYLE = "non-global";
 			};
@@ -518,8 +546,10 @@
 		5BD1CCDC1726DB4000587077 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
+				DEVELOPMENT_TEAM = BBFLXHGDRV;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
 				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
@@ -534,14 +564,14 @@
 					/usr/lib,
 					../../libstrongswan/.libs,
 					../../libcharon/.libs,
+					/usr/local/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				OTHER_CFLAGS = (
 					"-include",
 					../../../config.h,
 				);
 				OTHER_LDFLAGS = (
-					"-lcrypto",
 					"-force_load",
 					../../libstrongswan/.libs/libstrongswan.a,
 					"-force_load",
@@ -559,6 +589,7 @@
 				);
 				PRODUCT_NAME = "org.strongswan.charon-xpc";
 				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				STRIP_STYLE = "non-global";
 			};

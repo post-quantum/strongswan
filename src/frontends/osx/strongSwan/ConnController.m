@@ -48,6 +48,8 @@
     [NSApp abortModal];
 }
 
+//  DEFAULT_PROPOSAL="aes256gcm16-sha256-";}
+
 - (NSMutableDictionary*)createConnection
 {
 	NSMutableDictionary *conn = nil;
@@ -56,6 +58,10 @@
 	[name setStringValue:@""];
 	[server setStringValue:@""];
 	[user setStringValue:@""];
+    [ike_dh setStringValue:@"x25519"];
+    [ike_qs setStringValue:@"sikep503"];
+    [esp_dh setStringValue:@"x25519"];
+    [esp_qs setStringValue:@"newhope512cca"];
 	[ok setEnabled:FALSE];
 	[self moveWindowToActiveSpace];
 	if ([NSApp runModalForWindow: [self window]] == NSRunStoppedResponse)
@@ -64,6 +70,10 @@
 				[name stringValue], @"name",
 				[server stringValue], @"server",
 				[user stringValue], @"username",
+                [ike_dh titleOfSelectedItem], @"ike_dh",
+                [ike_qs titleOfSelectedItem], @"ike_qs",
+                [esp_dh titleOfSelectedItem], @"esp_dh",
+                [esp_qs titleOfSelectedItem], @"esp_qs",
 				nil];
 	}
 	[[self window] orderOut: self];
@@ -78,6 +88,10 @@
 	[name setStringValue:[conn objectForKey:@"name"]];
 	[server setStringValue:[conn objectForKey:@"server"]];
 	[user setStringValue:[conn objectForKey:@"username"]];
+    [ike_dh setTitle:[conn objectForKey:@"ike_dh"]];
+    [ike_qs setTitle:[conn objectForKey:@"ike_qs"]];
+    [esp_dh setTitle:[conn objectForKey:@"esp_dh"]];
+    [esp_qs setTitle:[conn objectForKey:@"esp_qs"]];
 	[ok setEnabled:TRUE];
 	[self moveWindowToActiveSpace];
 	if ([NSApp runModalForWindow: [self window]] == NSRunStoppedResponse)
@@ -85,6 +99,10 @@
 		[conn setObject:[name stringValue] forKey:@"name"];
 		[conn setObject:[server stringValue] forKey:@"server"];
 		[conn setObject:[user stringValue] forKey:@"username"];
+        [conn setObject:[ike_dh titleOfSelectedItem] forKey:@"ike_dh"];
+        [conn setObject:[ike_qs titleOfSelectedItem] forKey:@"ike_qs"];
+        [conn setObject:[esp_dh titleOfSelectedItem] forKey:@"esp_dh"];
+        [conn setObject:[esp_qs titleOfSelectedItem] forKey:@"esp_qs"];
 		edited = YES;
 	}
 	[[self window] orderOut: self];
@@ -99,4 +117,8 @@
 	 [[user stringValue] length]];
 }
 
+- (IBAction)popupBoxChanged:(id)sender {
+
+    [self controlTextDidChange:nil];
+}
 @end

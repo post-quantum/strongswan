@@ -44,6 +44,13 @@
 	 * Confirmation button to save/create connection
 	 */
 	IBOutlet NSButton *ok;
+    
+    
+    // Proposals
+    IBOutlet NSPopUpButton* ike_dh;
+    IBOutlet NSPopUpButton* ike_qs;
+    IBOutlet NSPopUpButton* esp_dh;
+    IBOutlet NSPopUpButton* esp_qs;
 }
 
 /**

@@ -174,10 +174,17 @@
 	xpc_object_t request;
 	xpc_connection_t service, daemon;
 	NSString *name, *server, *username;
+    NSString *ike, *esp;
 
 	name = [conn objectForKey:@"name"];
 	server = [conn objectForKey:@"server"];
 	username = [conn objectForKey:@"username"];
+    ike = [NSString stringWithFormat:@"aes256gcm16-sha256-%@-qs_%@",
+            [conn objectForKey:@"ike_dh"],
+            [conn objectForKey:@"ike_qs"]];
+    esp = [NSString stringWithFormat:@"aes256gcm16-sha256-%@-qs_%@",
+           [conn objectForKey:@"esp_dh"],
+           [conn objectForKey:@"esp_qs"]];
 
 	daemon = [helper getConnection];
 	if (!daemon)
@@ -191,6 +198,8 @@
 	xpc_dictionary_set_string(request, "name", [name UTF8String]);
 	xpc_dictionary_set_string(request, "host", [server UTF8String]);
 	xpc_dictionary_set_string(request, "id", [username UTF8String]);
+    xpc_dictionary_set_string(request, "ike", [ike UTF8String]);
+    xpc_dictionary_set_string(request, "esp", [esp UTF8String]);
 
 	service = xpc_connection_create(NULL, NULL);
 	xpc_connection_set_event_handler(service, ^(xpc_object_t channel) {

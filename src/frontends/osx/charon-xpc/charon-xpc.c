@@ -174,11 +174,15 @@ int main(int argc, char *argv[])
 	{
 		levels[group] = LEVEL_CTRL;
 	}
+    levels[DBG_IKE] = LEVEL_DIAG;
+    levels[DBG_CFG] = LEVEL_DIAG;
+
 	charon->set_default_loggers(charon, levels, TRUE);
 	charon->load_loggers(charon);
 
 	lib->settings->set_default_str(lib->settings, "charon-xpc.port", "0");
 	lib->settings->set_default_str(lib->settings, "charon-xpc.port_nat_t", "0");
+    lib->settings->set_default_str(lib->settings, "charon-xpc.send_vendor_id", "1");
 	lib->settings->set_default_str(lib->settings,
 								"charon-xpc.close_ike_on_child_failure", "yes");
 	lib->settings->set_default_str(lib->settings,
@@ -187,7 +191,7 @@ int main(int argc, char *argv[])
 			lib->settings->get_str(lib->settings, "charon-xpc.load",
 				"nonce pkcs1 openssl keychain ctr ccm gcm kernel-libipsec "
 				"kernel-pfroute socket-default eap-identity eap-mschapv2 "
-				"eap-md5 xauth-generic osx-attr")))
+				"eap-md5 xauth-generic osx-attr curve25519 nistpqc")))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}

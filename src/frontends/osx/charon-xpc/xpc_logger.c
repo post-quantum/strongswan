@@ -58,7 +58,9 @@ METHOD(logger_t, log_, void,
 METHOD(logger_t, get_level, level_t,
 	private_xpc_logger_t *this, debug_t group)
 {
-	return LEVEL_CTRL;
+    if (group==DBG_IKE)	return LEVEL_DIAG;
+    if (group==DBG_CFG) return LEVEL_DIAG;
+    return LEVEL_CTRL;
 }
 
 METHOD(xpc_logger_t, set_ike_sa, void,
